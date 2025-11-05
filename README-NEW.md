@@ -161,12 +161,12 @@ Si prefieres configurar las credenciales mediante Wrangler en lugar del panel we
 npx wrangler secret put ADMIN_KEY
 # Ingresa una clave segura (ej: "mi-clave-super-secreta-2024")
 
-# Proveedor de IA (openai o gemini)
-npx wrangler secret put AI_PROVIDER
-# Ingresa: openai o gemini
+# API Key de Gemini (si usas Gemini)
+npx wrangler secret put GEMINI_API_KEY
+# Para Gemini: AIza... (desde https://aistudio.google.com/app/api-keys)
 
-# API Key del proveedor elegido
-npx wrangler secret put AI_API_KEY
+# API Key de OpenAI (si usas OpenAI)
+npx wrangler secret put OPENAI_API_KEY
 # Para OpenAI: sk-...
 # Para Gemini: AIza...
 
