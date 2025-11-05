@@ -118,6 +118,7 @@ export default {
         return handleAddProjectPost(projectId, request, env, corsHeaders);
       }
 
+      // IMPORTANTE: Estas rutas específicas deben ir ANTES de las genéricas
       if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts\/bulk$/) && request.method === 'POST') {
         const projectId = url.pathname.split('/')[3];
         return handleBulkAddProjectPosts(projectId, request, env, corsHeaders);
@@ -129,6 +130,7 @@ export default {
         return handleGenerateAllProjectPosts(projectId, env, corsHeaders);
       }
 
+      // Eliminar post individual (debe ir después de /bulk y /generate-all-posts)
       if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts\/[^/]+$/) && request.method === 'DELETE') {
         const parts = url.pathname.split('/');
         const projectId = parts[3];

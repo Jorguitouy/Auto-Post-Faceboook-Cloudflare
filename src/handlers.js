@@ -81,12 +81,22 @@ export async function handleBulkAddProjectPosts(projectId, request, env, corsHea
 }
 
 export async function handleDeleteProjectPost(projectId, postId, env, corsHeaders) {
+  console.log(`Eliminando post: projectId=${projectId}, postId=${postId}`);
+  
   const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${projectId}:posts`, { type: 'json' }) || { posts: [] };
+  console.log(`Posts antes de eliminar: ${projectPosts.posts.length}`);
+  
+  const initialLength = projectPosts.posts.length;
   projectPosts.posts = projectPosts.posts.filter(p => p.id !== postId);
+  
+  console.log(`Posts después de eliminar: ${projectPosts.posts.length}, Eliminados: ${initialLength - projectPosts.posts.length}`);
   
   await env.FB_PUBLISHER_KV.put(`project:${projectId}:posts`, JSON.stringify(projectPosts));
 
-  return new Response(JSON.stringify({ success: true }), {
+  return new Response(JSON.stringify({ 
+    success: true,
+    deleted: initialLength - projectPosts.posts.length > 0
+  }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
