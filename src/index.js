@@ -1,6 +1,7 @@
 /**
- * Sistema de Auto-publicación en Facebook
+ * Sistema de Auto-publicación en Facebook con Multi-Proyecto y IA
  * Publica URLs de tus sitios web en tu fanpage de Facebook automáticamente
+ * Con generación de contenido mediante IA
  */
 
 export default {
@@ -27,7 +28,7 @@ export default {
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
     if (request.method === 'OPTIONS') {
@@ -35,36 +36,87 @@ export default {
     }
 
     try {
-      // Rutas disponibles
-      if (url.pathname === '/') {
+      // Dashboard principal
+      if (url.pathname === '/' || url.pathname === '/dashboard') {
         return new Response(getDashboardHTML(), {
           headers: { ...corsHeaders, 'Content-Type': 'text/html' }
         });
       }
 
-      if (url.pathname === '/api/posts' && request.method === 'GET') {
-        return handleGetPosts(env, corsHeaders);
+      // ========== PROYECTOS ==========
+      if (url.pathname === '/api/projects' && request.method === 'GET') {
+        return handleGetProjects(env, corsHeaders);
       }
 
-      if (url.pathname === '/api/posts' && request.method === 'POST') {
-        return handleAddPost(request, env, corsHeaders);
+      if (url.pathname === '/api/projects' && request.method === 'POST') {
+        return handleCreateProject(request, env, corsHeaders);
       }
 
-      if (url.pathname === '/api/posts/bulk' && request.method === 'POST') {
-        return handleBulkAddPosts(request, env, corsHeaders);
+      if (url.pathname.match(/^\/api\/projects\/[^/]+$/) && request.method === 'GET') {
+        const projectId = url.pathname.split('/').pop();
+        return handleGetProject(projectId, env, corsHeaders);
       }
 
+      if (url.pathname.match(/^\/api\/projects\/[^/]+$/) && request.method === 'PUT') {
+        const projectId = url.pathname.split('/').pop();
+        return handleUpdateProject(projectId, request, env, corsHeaders);
+      }
+
+      if (url.pathname.match(/^\/api\/projects\/[^/]+$/) && request.method === 'DELETE') {
+        const projectId = url.pathname.split('/').pop();
+        return handleDeleteProject(projectId, env, corsHeaders);
+      }
+
+      // ========== POSTS POR PROYECTO ==========
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts$/) && request.method === 'GET') {
+        const projectId = url.pathname.split('/')[3];
+        return handleGetProjectPosts(projectId, env, corsHeaders);
+      }
+
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts$/) && request.method === 'POST') {
+        const projectId = url.pathname.split('/')[3];
+        return handleAddProjectPost(projectId, request, env, corsHeaders);
+      }
+
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts\/bulk$/) && request.method === 'POST') {
+        const projectId = url.pathname.split('/')[3];
+        return handleBulkAddProjectPosts(projectId, request, env, corsHeaders);
+      }
+
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/posts\/[^/]+$/) && request.method === 'DELETE') {
+        const parts = url.pathname.split('/');
+        const projectId = parts[3];
+        const postId = parts[5];
+        return handleDeleteProjectPost(projectId, postId, env, corsHeaders);
+      }
+
+      // ========== GENERACIÓN DE CONTENIDO CON IA ==========
+      if (url.pathname === '/api/generate-content' && request.method === 'POST') {
+        return handleGenerateContent(request, env, corsHeaders);
+      }
+
+      if (url.pathname === '/api/generate-bulk-content' && request.method === 'POST') {
+        return handleGenerateBulkContent(request, env, corsHeaders);
+      }
+
+      // ========== PUBLICACIÓN ==========
       if (url.pathname === '/api/publish' && request.method === 'POST') {
-        return handleManualPublish(env, corsHeaders);
+        return handleManualPublish(request, env, corsHeaders);
       }
 
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/publish$/) && request.method === 'POST') {
+        const projectId = url.pathname.split('/')[3];
+        return handlePublishProjectPost(projectId, env, corsHeaders);
+      }
+
+      // ========== ESTADÍSTICAS ==========
       if (url.pathname === '/api/stats' && request.method === 'GET') {
         return handleGetStats(env, corsHeaders);
       }
 
-      if (url.pathname.startsWith('/api/posts/') && request.method === 'DELETE') {
-        const id = url.pathname.split('/').pop();
-        return handleDeletePost(id, env, corsHeaders);
+      if (url.pathname.match(/^\/api\/projects\/[^/]+\/stats$/) && request.method === 'GET') {
+        const projectId = url.pathname.split('/')[3];
+        return handleGetProjectStats(projectId, env, corsHeaders);
       }
 
       return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -79,49 +131,72 @@ export default {
 };
 
 /**
- * Publica el siguiente post pendiente en Facebook
+ * Publica el siguiente post pendiente en Facebook (de todos los proyectos)
  */
 async function publishNextPost(env) {
-  // Obtener todos los posts pendientes
-  const postsData = await env.FB_PUBLISHER_KV.get('posts', { type: 'json' }) || { posts: [] };
-  const pendingPosts = postsData.posts.filter(p => p.status === 'pending');
-
-  if (pendingPosts.length === 0) {
-    console.log('No hay posts pendientes para publicar');
-    return { success: false, message: 'No hay posts pendientes' };
+  // Obtener todos los proyectos
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  
+  // Buscar posts pendientes en todos los proyectos activos
+  for (const project of projects.projects) {
+    if (!project.active) continue;
+    
+    const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${project.id}:posts`, { type: 'json' }) || { posts: [] };
+    const pendingPosts = projectPosts.posts.filter(p => p.status === 'pending');
+    
+    if (pendingPosts.length > 0) {
+      const nextPost = pendingPosts[0];
+      const result = await publishPostToFacebook(project.id, nextPost, env);
+      return result;
+    }
   }
 
-  // Seleccionar el siguiente post (round-robin)
-  const nextPost = pendingPosts[0];
+  console.log('No hay posts pendientes para publicar');
+  return { success: false, message: 'No hay posts pendientes en ningún proyecto' };
+}
+
+/**
+ * Publica un post específico en Facebook
+ */
+async function publishPostToFacebook(projectId, post, env) {
+  // Obtener configuración del proyecto
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  const project = projects.projects.find(p => p.id === projectId);
+  
+  if (!project) {
+    return { success: false, error: 'Proyecto no encontrado' };
+  }
 
   // Publicar en Facebook
-  const fbResponse = await publishToFacebook(nextPost, env);
+  const fbResponse = await publishToFacebook(post, env);
 
-  if (fbResponse.success) {
-    // Actualizar el estado del post
-    nextPost.status = 'published';
-    nextPost.publishedAt = new Date().toISOString();
-    nextPost.facebookPostId = fbResponse.postId;
+  // Actualizar el post
+  const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${projectId}:posts`, { type: 'json' }) || { posts: [] };
+  const postIndex = projectPosts.posts.findIndex(p => p.id === post.id);
+  
+  if (postIndex !== -1) {
+    if (fbResponse.success) {
+      projectPosts.posts[postIndex].status = 'published';
+      projectPosts.posts[postIndex].publishedAt = new Date().toISOString();
+      projectPosts.posts[postIndex].facebookPostId = fbResponse.postId;
+      
+      await updateProjectStats(projectId, env, 'published');
+      console.log(`Post publicado: ${post.id} del proyecto ${projectId}`);
+    } else {
+      projectPosts.posts[postIndex].status = 'error';
+      projectPosts.posts[postIndex].lastError = fbResponse.error;
+      projectPosts.posts[postIndex].errorAt = new Date().toISOString();
+      
+      await updateProjectStats(projectId, env, 'error');
+      console.error(`Error al publicar: ${fbResponse.error}`);
+    }
     
-    await env.FB_PUBLISHER_KV.put('posts', JSON.stringify(postsData));
-
-    // Guardar estadísticas
-    await updateStats(env, 'published');
-
-    console.log('Post publicado exitosamente:', nextPost.id);
-    return { success: true, post: nextPost };
-  } else {
-    // Marcar como error
-    nextPost.status = 'error';
-    nextPost.lastError = fbResponse.error;
-    nextPost.errorAt = new Date().toISOString();
-    
-    await env.FB_PUBLISHER_KV.put('posts', JSON.stringify(postsData));
-    await updateStats(env, 'error');
-
-    console.error('Error al publicar post:', fbResponse.error);
-    return { success: false, error: fbResponse.error };
+    await env.FB_PUBLISHER_KV.put(`project:${projectId}:posts`, JSON.stringify(projectPosts));
   }
+
+  return fbResponse.success ? 
+    { success: true, post: projectPosts.posts[postIndex], project: project.name } :
+    { success: false, error: fbResponse.error };
 }
 
 /**
@@ -186,12 +261,133 @@ async function updateStats(env, action) {
   await env.FB_PUBLISHER_KV.put('stats', JSON.stringify(stats));
 }
 
-/**
- * Handlers de API
- */
-async function handleGetPosts(env, corsHeaders) {
-  const postsData = await env.FB_PUBLISHER_KV.get('posts', { type: 'json' }) || { posts: [] };
-  return new Response(JSON.stringify(postsData), {
+// ========================================
+// HANDLERS DE PROYECTOS
+// ========================================
+
+async function handleGetProjects(env, corsHeaders) {
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  
+  // Agregar estadísticas a cada proyecto
+  for (const project of projects.projects) {
+    const stats = await env.FB_PUBLISHER_KV.get(`project:${project.id}:stats`, { type: 'json' }) || {
+      totalPosts: 0,
+      publishedPosts: 0,
+      pendingPosts: 0,
+      errorPosts: 0
+    };
+    project.stats = stats;
+  }
+  
+  return new Response(JSON.stringify(projects), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+async function handleCreateProject(request, env, corsHeaders) {
+  const data = await request.json();
+  
+  const newProject = {
+    id: generateId(),
+    name: data.name,
+    domain: data.domain,
+    description: data.description || '',
+    fbPageId: data.fbPageId || env.FB_PAGE_ID,
+    active: true,
+    createdAt: new Date().toISOString(),
+    settings: {
+      aiEnabled: data.aiEnabled !== undefined ? data.aiEnabled : true,
+      autoPublish: data.autoPublish !== undefined ? data.autoPublish : true,
+      postTemplate: data.postTemplate || ''
+    }
+  };
+
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  projects.projects.push(newProject);
+  
+  await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
+  
+  // Inicializar estadísticas del proyecto
+  await env.FB_PUBLISHER_KV.put(`project:${newProject.id}:stats`, JSON.stringify({
+    totalPosts: 0,
+    publishedPosts: 0,
+    pendingPosts: 0,
+    errorPosts: 0,
+    lastPublish: null
+  }));
+  
+  // Inicializar lista de posts
+  await env.FB_PUBLISHER_KV.put(`project:${newProject.id}:posts`, JSON.stringify({ posts: [] }));
+
+  return new Response(JSON.stringify({ success: true, project: newProject }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+async function handleGetProject(projectId, env, corsHeaders) {
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  const project = projects.projects.find(p => p.id === projectId);
+  
+  if (!project) {
+    return new Response(JSON.stringify({ error: 'Proyecto no encontrado' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  
+  return new Response(JSON.stringify(project), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+async function handleUpdateProject(projectId, request, env, corsHeaders) {
+  const data = await request.json();
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  const projectIndex = projects.projects.findIndex(p => p.id === projectId);
+  
+  if (projectIndex === -1) {
+    return new Response(JSON.stringify({ error: 'Proyecto no encontrado' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  
+  projects.projects[projectIndex] = {
+    ...projects.projects[projectIndex],
+    ...data,
+    id: projectId, // Preservar el ID
+    updatedAt: new Date().toISOString()
+  };
+  
+  await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
+  
+  return new Response(JSON.stringify({ success: true, project: projects.projects[projectIndex] }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+async function handleDeleteProject(projectId, env, corsHeaders) {
+  const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+  projects.projects = projects.projects.filter(p => p.id !== projectId);
+  
+  await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
+  
+  // Eliminar datos relacionados
+  await env.FB_PUBLISHER_KV.delete(`project:${projectId}:posts`);
+  await env.FB_PUBLISHER_KV.delete(`project:${projectId}:stats`);
+  
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+// ========================================
+// HANDLERS DE POSTS POR PROYECTO
+// ========================================
+
+async function handleGetProjectPosts(projectId, env, corsHeaders) {
+  const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${projectId}:posts`, { type: 'json' }) || { posts: [] };
+  return new Response(JSON.stringify(projectPosts), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
