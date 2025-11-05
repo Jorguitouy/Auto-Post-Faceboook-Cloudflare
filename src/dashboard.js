@@ -394,6 +394,33 @@ async function generateAllPosts(projectId) {
         return;
     }
     
+    // Verificar conexión con IA antes de procesar
+    showMessage('🔍 Verificando conexión con IA...', 'info');
+    
+    try {
+        // Test rápido de conexión
+        const testResponse = await fetch('/api/generate-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                url: 'https://example.com', 
+                context: 'Test' 
+            })
+        });
+        
+        const testResult = await testResponse.json();
+        
+        if (!testResult.success) {
+            showMessage(`❌ Error de IA: ${testResult.error}\n\nVerifica tu configuración en la pestaña ⚙️ Configuración`, 'error');
+            return;
+        }
+    } catch (error) {
+        showMessage(`❌ No se pudo conectar con la API de IA: ${error.message}\n\nVerifica tu configuración`, 'error');
+        return;
+    }
+    
+    showMessage('✅ Conexión verificada', 'success');
+    
     if (!confirm(`Generar contenido con IA para "${project.name}"?\n\n` +
                  `📊 URLs totales: ${urlCount}\n` +
                  `✅ Ya procesadas: ${existingPosts}\n` +
@@ -764,6 +791,83 @@ function loadProjectsForAI() {
         select.innerHTML = '<option value="">Selecciona un proyecto...</option>' +
             projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     });
+}
+
+async function testAIConnection() {
+    const statusDiv = document.getElementById('aiConnectionStatus');
+    
+    showMessage('🔍 Probando conexión con IA...', 'info');
+    statusDiv.style.display = 'block';
+    statusDiv.className = 'message info';
+    statusDiv.innerHTML = '<span>🔄</span><div><strong>Probando conexión...</strong><br>Esto puede tardar unos segundos</div>';
+    
+    try {
+        // Usar una URL de prueba simple
+        const testUrl = 'https://www.example.com';
+        
+        const response = await fetch('/api/generate-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                url: testUrl, 
+                context: 'Test de conexión de API' 
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Obtener configuración para mostrar detalles
+            const configResponse = await fetch('/api/settings');
+            const configData = await configResponse.json();
+            
+            const provider = configData.settings?.aiProvider || 'No configurado';
+            const model = configData.settings?.aiModel || 'No configurado';
+            
+            statusDiv.className = 'message success';
+            statusDiv.innerHTML = `
+                <span>✅</span>
+                <div>
+                    <strong>Conexión exitosa!</strong><br>
+                    <small>
+                        • Proveedor: <strong>${provider === 'openai' ? 'OpenAI' : provider === 'gemini' ? 'Google Gemini' : provider}</strong><br>
+                        • Modelo: <strong>${model}</strong><br>
+                        • Estado: Listo para generar contenido
+                    </small>
+                </div>
+            `;
+            showMessage('✅ API de IA funcionando correctamente', 'success');
+        } else {
+            statusDiv.className = 'message error';
+            statusDiv.innerHTML = `
+                <span>❌</span>
+                <div>
+                    <strong>Error de conexión</strong><br>
+                    <small>${result.error || 'Error desconocido'}</small><br><br>
+                    <strong>Soluciones:</strong><br>
+                    • Ve a <strong>⚙️ Configuración</strong><br>
+                    • Verifica tu <strong>API Key</strong><br>
+                    • Asegúrate de que el proveedor esté seleccionado
+                </div>
+            `;
+            showMessage('❌ ' + (result.error || 'Error al conectar con la API de IA'), 'error');
+        }
+    } catch (error) {
+        statusDiv.className = 'message error';
+        statusDiv.innerHTML = `
+            <span>❌</span>
+            <div>
+                <strong>Error al probar conexión</strong><br>
+                <small>${error.message}</small><br><br>
+                <strong>Posibles causas:</strong><br>
+                • API Key no configurada<br>
+                • API Key inválida<br>
+                • Límite de requests excedido<br>
+                • Problema de red
+            </div>
+        `;
+        showMessage('❌ Error: ' + error.message, 'error');
+    }
 }
 
 async function generateContent() {
