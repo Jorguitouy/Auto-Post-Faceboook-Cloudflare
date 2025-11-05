@@ -277,6 +277,16 @@
                     <small id="aiApiKeyStatus">No configurada</small>
                 </div>
                 
+                <!-- Botón para probar API -->
+                <div style="margin-top: 12px; margin-bottom: 12px;">
+                    <button class="primary" onclick="testCurrentAIConfig()" style="width: 100%;">
+                        🧪 Probar Configuración de IA
+                    </button>
+                </div>
+                
+                <!-- Resultado de la prueba -->
+                <div id="aiTestResult" style="display: none; margin-top: 12px;"></div>
+                
                 <div id="aiProviderInfo" class="message info" style="display:none; margin-top: 12px;">
                     <span>📖</span>
                     <div id="aiProviderInfoText"></div>

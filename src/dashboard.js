@@ -1241,6 +1241,122 @@ function updateAIProviderInfo() {
     infoDiv.style.display = 'flex';
 }
 
+// ========== PROBAR CONFIGURACIÓN DE IA ==========
+
+async function testCurrentAIConfig() {
+    const provider = document.getElementById('aiProvider').value;
+    const model = document.getElementById('aiModel').value;
+    const apiKey = document.getElementById('aiApiKey').value;
+    const resultDiv = document.getElementById('aiTestResult');
+    
+    // Validaciones
+    if (!apiKey) {
+        resultDiv.className = 'message error';
+        resultDiv.innerHTML = '<span>❌</span><div>Por favor ingresa la API Key antes de probar</div>';
+        resultDiv.style.display = 'flex';
+        return;
+    }
+    
+    if (!model) {
+        resultDiv.className = 'message error';
+        resultDiv.innerHTML = '<span>❌</span><div>Por favor selecciona un modelo antes de probar</div>';
+        resultDiv.style.display = 'flex';
+        return;
+    }
+    
+    // Mostrar mensaje de carga
+    resultDiv.className = 'message info';
+    resultDiv.innerHTML = '<span>⏳</span><div>Probando conexión con ' + provider + ' (' + model + ')...</div>';
+    resultDiv.style.display = 'flex';
+    
+    try {
+        let response;
+        
+        if (provider === 'openai') {
+            // Probar OpenAI
+            response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'user', content: 'Di solo: OK' }
+                    ],
+                    max_tokens: 10
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Error al conectar con OpenAI');
+            }
+            
+            const content = data.choices?.[0]?.message?.content || '';
+            resultDiv.className = 'message success';
+            resultDiv.innerHTML = `
+                <span>✅</span>
+                <div>
+                    <strong>Conexión exitosa con OpenAI</strong><br>
+                    Modelo: ${model}<br>
+                    Respuesta: "${content.substring(0, 50)}"
+                </div>
+            `;
+            
+        } else if (provider === 'gemini') {
+            // Probar Gemini
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: 'Di solo: OK'
+                        }]
+                    }]
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error?.message || 'Error al conectar con Gemini');
+            }
+            
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            resultDiv.className = 'message success';
+            resultDiv.innerHTML = `
+                <span>✅</span>
+                <div>
+                    <strong>Conexión exitosa con Gemini</strong><br>
+                    Modelo: ${model}<br>
+                    Respuesta: "${content.substring(0, 50)}"
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        resultDiv.className = 'message error';
+        resultDiv.innerHTML = `
+            <span>❌</span>
+            <div>
+                <strong>Error al probar la API</strong><br>
+                ${error.message}<br>
+                <small>Verifica que la API Key y el modelo sean correctos</small>
+            </div>
+        `;
+    }
+    
+    resultDiv.style.display = 'flex';
+}
+
 // Event listener para cambio de proveedor
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
