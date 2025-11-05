@@ -1,6 +1,12 @@
 name = "facebook-auto-publisher"
-main = "src/index.js"
+main = "src/index-new.js"
 compatibility_date = "2024-01-01"
+
+# Reglas para importar archivos como texto
+[[rules]]
+type = "Text"
+globs = ["**/*.html", "**/*.css", "**/dashboard.js"]
+fallthrough = true
 
 # Cron triggers para publicar en horarios específicos
 # Ajusta estos horarios según tus necesidades
@@ -14,7 +20,7 @@ crons = [
 # KV namespace para almacenar URLs y estado
 [[kv_namespaces]]
 binding = "FB_PUBLISHER_KV"
-id = "tu_kv_namespace_id"  # Lo obtendrás al crear el namespace
+id = "821ab7da6c7b45b098c0470c9abe20ab"
 
 # Variables de entorno (usa wrangler secret para los valores sensibles)
 [vars]

@@ -1,6 +1,6 @@
 # 📘 Facebook Auto-Publisher - Sistema Multi-Proyecto con IA
 
-Sistema automatizado profesional para publicar contenido en Facebook desde múltiples sitios web, con gestión por proyectos separados y generación de contenido mediante Inteligencia Artificial.
+Sistema automatizado profesional para publicar contenido en Facebook desde múltiples sitios web, con gestión por proyectos separados y generación de contenido mediante Inteligencia Artificial (OpenAI o Google Gemini).
 
 ## 🌟 Características Principales
 
@@ -17,16 +17,26 @@ Sistema automatizado profesional para publicar contenido en Facebook desde múlt
 - **Publicaciones más atractivas** con imágenes destacadas
 - **Ver guía completa:** [OPEN-GRAPH-GUIDE.md](OPEN-GRAPH-GUIDE.md)
 
-### 🤖 Generación de Contenido con IA
-- **OpenAI GPT** integrado para crear contenido automáticamente
+### 🤖 Generación de Contenido con IA Multi-Proveedor
+- **OpenAI (GPT-3.5/GPT-4)** o **Google Gemini** a tu elección
+- **Cambio en caliente** entre proveedores sin redesplegar
 - **Análisis de URLs** para generar mensajes relevantes
 - **Personalización** basada en el contenido de cada página
-- **Generación en lote** para múltiples URLs
+- **Generación en lote** para múltiples URLs (hasta 200+)
 - **Mensajes optimizados** con emojis y llamados a la acción
+- **Gemini GRATIS** hasta 60 requests/min
+
+### ⚙️ Configuración Dinámica desde el Panel
+- **Edita credenciales** directamente desde el navegador
+- **Cambiar proveedor de IA** sin tocar código
+- **Guardar Facebook tokens** en Cloudflare KV
+- **Protegido con Admin Key** para seguridad
+- **Sin necesidad de redesplegar** al cambiar configuración
 
 ### 📊 Panel de Control Profesional
-- **Interfaz gráfica moderna** con HTML/CSS/JS
+- **Interfaz gráfica moderna** con HTML/CSS/JS separados
 - **Dashboard interactivo** con estadísticas en tiempo real
+- **5 secciones organizadas**: Dashboard, Proyectos, Posts, IA, Configuración
 - **Gestión visual** de proyectos y posts
 - **Sistema de tabs** organizado por funcionalidad
 - **Responsive design** para móviles y tablets
@@ -86,76 +96,207 @@ binding = "FB_PUBLISHER_KV"
 id = "tu_id_aqui"  # Reemplaza con el ID obtenido
 ```
 
-### 4. Configurar Credenciales de Facebook
-
-1. Ve a [Facebook Developers](https://developers.facebook.com/)
-2. Crea una app o selecciona una existente
-3. Ve a **Herramientas > Graph API Explorer**
-4. Selecciona tu app y tu página
-5. Agrega permisos: `pages_manage_posts`, `pages_read_engagement`
-6. Genera un token de acceso de página
-7. Obtén el ID de tu página
+### 3. Configurar Cloudflare
 
 ```powershell
-# Configurar token de Facebook
-npx wrangler secret put FB_PAGE_ACCESS_TOKEN
-# Pega tu token cuando te lo pida
+# Autenticar
+npx wrangler login
 
-# Configurar ID de página
-npx wrangler secret put FB_PAGE_ID
-# Pega el ID de tu página
+# Crear KV namespace
+npx wrangler kv:namespace create FB_PUBLISHER_KV
 ```
 
-### 5. Configurar OpenAI (Opcional - Para IA)
+Copia el ID que te devuelve y actualiza `wrangler.toml`:
 
-Para habilitar la generación automática de contenido:
+```toml
+[[kv_namespaces]]
+binding = "FB_PUBLISHER_KV"
+id = "tu_id_aqui"  # Reemplaza con el ID obtenido
+```
 
-1. Obtén una API Key en [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Configura el secreto:
+### 4. Configurar Clave de Administrador
+
+**NUEVO**: Esta clave protege la configuración del panel.
 
 ```powershell
-npx wrangler secret put OPENAI_API_KEY
-# Pega tu API key cuando te lo pida
+npx wrangler secret put ADMIN_KEY
+# Ingresa una clave segura (ej: mi-clave-admin-2024)
 ```
 
-### 6. Desplegar
+### 5. Desplegar
 
 ```powershell
 npm run deploy
 ```
 
-¡Listo! Tu worker estará disponible en una URL como:
+Tu worker estará disponible en: `https://facebook-auto-publisher.tu-cuenta.workers.dev`
+
+### 6. Configurar desde el Panel Web
+
+**NUEVO**: Ahora puedes configurar todo desde el navegador sin usar la terminal.
+
+1. **Abre el dashboard** en la URL de tu worker
+2. **Ve al tab "⚙️ Configuración"**
+3. **Ingresa tu clave de administrador** (configurada en paso 4)
+4. **Selecciona proveedor de IA**:
+   - **OpenAI (GPT-3.5/GPT-4)**: 
+     - API Key: https://platform.openai.com/api-keys
+     - Formato: `sk-...`
+     - Costo: ~$0.002/1K tokens
+   - **Google Gemini**: 
+     - API Key: https://makersuite.google.com/app/apikey
+     - Formato: `AIza...`
+     - **GRATIS** hasta 60 req/min ✅
+5. **Configura Facebook**:
+   - Page ID y Page Access Token
+   - Ver [GUIA-AUTORIZACION-FACEBOOK.md](GUIA-AUTORIZACION-FACEBOOK.md)
+6. **Guardar** y ¡listo!
+
+### 7. (Opcional) Configurar vía Wrangler Secrets
+
+Si prefieres configurar las credenciales mediante Wrangler en lugar del panel web:
+
+```powershell
+# Clave de administrador (OBLIGATORIA)
+npx wrangler secret put ADMIN_KEY
+# Ingresa una clave segura (ej: "mi-clave-super-secreta-2024")
+
+# Proveedor de IA (openai o gemini)
+npx wrangler secret put AI_PROVIDER
+# Ingresa: openai o gemini
+
+# API Key del proveedor elegido
+npx wrangler secret put AI_API_KEY
+# Para OpenAI: sk-...
+# Para Gemini: AIza...
+
+# Configuración de Facebook
+npx wrangler secret put FB_PAGE_ACCESS_TOKEN
+# Pega tu Page Access Token (desde Graph API Explorer)
+
+npx wrangler secret put FB_PAGE_ID
+# Pega el ID de tu página de Facebook
+```
+
+**Nota**: Los valores configurados en el panel web tienen prioridad sobre los secrets de Wrangler.
+
+### 8. Desplegar
+
+```powershell
+npm run deploy
+```
+
+✅ **¡Tu Worker está listo!** Estará disponible en:
 `https://facebook-auto-publisher.tu-cuenta.workers.dev`
+
+**Accede al Panel** y configura todo desde el navegador (sin editar código).
 
 ## 📖 Guía de Uso
 
-### Crear Proyectos
+El panel de control tiene **5 secciones principales**:
 
-1. Accede al panel de control en la URL de tu worker
-2. Ve a la pestaña **📁 Proyectos**
-3. Completa el formulario:
-   - **Nombre**: Identificador del proyecto (ej: "Blog Personal")
-   - **Dominio**: URL del sitio (ej: "www.miblog.com")
-   - **Descripción**: Opcional, describe el proyecto
-   - **IA Habilitada**: Permite generar contenido automático
-   - **Auto-publicar**: Publica en horarios programados
-4. Click en **➕ Crear Proyecto**
+### 📊 **Dashboard** (Resumen)
+- Vista general del sistema
+- Estadísticas de proyectos, posts y publicaciones
+- Estado de sincronización
+- Enlaces rápidos
 
-### Agregar Posts Manualmente
+### 📁 **Proyectos** (Multi-Sitio)
+Gestiona tus sitios web:
 
-1. Ve a la pestaña **📝 Posts**
-2. Selecciona un proyecto
-3. Ingresa la URL y el mensaje
-4. Click en **➕ Agregar Post**
+1. **Crear un proyecto**: Haz clic en **Crear Proyecto**
+   - **Nombre**: Identificador (ej: "Blog Personal")
+   - **Dominio**: URL completa (ej: "https://www.miblog.com")
+   - **Descripción**: Opcional
 
-### Usar el Generador de IA
+2. **Sincronizar URLs**: Importa automáticamente todas las URLs del sitemap
+   - El sistema busca `/sitemap.xml` en el dominio
+   - Extrae todas las `<loc>` encontradas
+   - Guarda las URLs para publicación
 
-#### Individual:
-1. Ve a la pestaña **🤖 Generador IA**
-2. Selecciona el proyecto
-3. Pega la URL del contenido
-4. (Opcional) Agrega contexto adicional
-5. Click en **✨ Generar Contenido**
+3. **Ver/Editar/Eliminar**: Gestiona tus proyectos desde la tabla
+
+**Ejemplo: 7 Sitios con 200 URLs cada uno**
+```
+Proyecto 1: www.sitio1.com → 200 URLs importadas
+Proyecto 2: www.sitio2.com → 200 URLs importadas
+...
+Proyecto 7: www.sitio7.com → 200 URLs importadas
+Total: 1,400 URLs listas para publicar
+```
+
+
+### 📝 **Posts** (Cola de Publicación)
+Administra el contenido pendiente:
+
+1. **Ver posts**: Tabla con todos los posts por proyecto
+   - Estado: pendiente, publicado, error
+   - URL, mensaje, fecha de publicación
+   
+2. **Agregar manualmente**: 
+   - Selecciona proyecto
+   - Ingresa URL del contenido
+   - Escribe mensaje personalizado
+   - **Agregar Post**
+
+3. **Agregar masivamente con IA**:
+   - Selecciona proyecto
+   - El sistema toma URLs del proyecto (desde sitemap)
+   - Genera contenido automático para múltiples URLs
+   - **Generar y Agregar Posts** (hasta 50 URLs simultáneas)
+
+4. **Eliminar posts**: Limpia la cola antes de publicar
+
+### 🤖 **IA** (Generador de Contenido)
+Genera publicaciones automáticas con OpenAI o Gemini:
+
+**Modo Individual**:
+1. Selecciona el proyecto
+2. Pega una URL específica
+3. (Opcional) Agrega contexto adicional
+4. **Generar Contenido** → Obtén un mensaje optimizado para redes sociales
+
+**Modo Masivo**:
+1. Selecciona el proyecto
+2. Las URLs se toman automáticamente del proyecto
+3. **Generar Masivamente** → Crea posts para hasta 50 URLs
+4. Los posts se agregan automáticamente a la cola
+
+**¿Cómo funciona?**
+- El sistema extrae automáticamente el contenido de la URL (usando Open Graph tags: `og:title`, `og:description`, `og:image`)
+- La IA (OpenAI GPT-3.5/GPT-4 o Google Gemini) redacta un mensaje atractivo
+- El mensaje incluye emojis, hashtags y texto optimizado para engagement
+
+**Comparación de Proveedores**:
+| Característica | OpenAI (GPT-3.5) | Google Gemini |
+|---|---|---|
+| Costo | ~$0.002 por 1K tokens | **GRATIS** ✅ |
+| Límite | Según plan (pago) | 60 req/min |
+| Calidad | Excelente | Excelente |
+| Recomendación | Producción con presupuesto | **Ideal para empezar** 🎉 |
+
+### ⚙️ **Configuración** (Panel Dinámico)
+Configura todo desde el navegador sin editar código:
+
+1. **Clave de Administrador**: Ingresa tu `ADMIN_KEY`
+2. **Proveedor de IA**: Selecciona OpenAI o Gemini
+   - Se muestra información contextual del proveedor elegido
+   - Enlace para obtener API Key
+   - Costos y límites
+3. **API Key del Proveedor**: Pega tu clave (se ofusca al mostrar)
+4. **Facebook**:
+   - Page ID: ID de tu página
+   - Page Access Token: Token de acceso (ver [GUIA-AUTORIZACION-FACEBOOK.md](GUIA-AUTORIZACION-FACEBOOK.md))
+5. **Guardar Configuración** → Los cambios se aplican inmediatamente
+
+**Indicadores de Estado**:
+- ✅ **Configurado**: Credencial guardada correctamente
+- ⚠️ **No configurado**: Falta completar este campo
+
+**Seguridad**:
+- Admin Key protege el endpoint `/api/settings`
+- Los tokens se ofuscan al mostrarse (ej: `sk-...ABC123`)
+- Todo se almacena en Cloudflare KV (encriptado)
 6. Revisa el contenido generado
 7. Click en **💾 Guardar Post**
 

@@ -27,11 +27,9 @@ let projects = [];
 let stats = {};
 
 // Inicializar al cargar la página
-if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-        init();
-    });
-}
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
 
 async function init() {
     await refreshAll();
@@ -961,3 +959,4 @@ document.addEventListener('DOMContentLoaded', () => {
         aiProviderSelect.addEventListener('change', updateAIProviderInfo);
     }
 });
+
