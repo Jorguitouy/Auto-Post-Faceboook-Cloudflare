@@ -216,6 +216,7 @@ async function handleCreateProject(request, env, corsHeaders) {
     name: data.name,
     domain: data.domain,
     description: data.description || '',
+    urls: data.urls || [], // Array de URLs del proyecto
     fbPageId: data.fbPageId || env.FB_PAGE_ID,
     active: true,
     createdAt: new Date().toISOString(),

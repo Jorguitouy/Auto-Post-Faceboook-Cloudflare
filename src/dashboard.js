@@ -223,12 +223,31 @@ async function createProject() {
     const name = document.getElementById('projectName').value.trim();
     const domain = document.getElementById('projectDomain').value.trim();
     const description = document.getElementById('projectDescription').value.trim();
+    const urlsText = document.getElementById('projectUrls').value.trim();
     const aiEnabled = document.getElementById('projectAiEnabled').checked;
     const autoPublish = document.getElementById('projectAutoPublish').checked;
     
     if (!name || !domain) {
         showMessage('⚠️ Por favor completa el nombre y dominio', 'error');
         return;
+    }
+    
+    // Procesar URLs (una por línea)
+    let urls = [];
+    if (urlsText) {
+        urls = urlsText.split('\n')
+            .map(url => url.trim())
+            .filter(url => url && url.startsWith('http'));
+        
+        if (urls.length === 0) {
+            showMessage('⚠️ No se encontraron URLs válidas. Asegúrate de que empiecen con http:// o https://', 'error');
+            return;
+        }
+        
+        if (urls.length > 500) {
+            showMessage('⚠️ Máximo 500 URLs por proyecto. Tienes ' + urls.length, 'error');
+            return;
+        }
     }
     
     try {
@@ -239,6 +258,7 @@ async function createProject() {
                 name,
                 domain,
                 description,
+                urls,
                 aiEnabled,
                 autoPublish
             })
@@ -247,12 +267,14 @@ async function createProject() {
         const result = await response.json();
         
         if (result.success) {
-            showMessage(`✅ Proyecto "${name}" creado exitosamente`, 'success');
+            const urlsMsg = urls.length > 0 ? ` con ${urls.length} URLs` : '';
+            showMessage(`✅ Proyecto "${name}" creado exitosamente${urlsMsg}`, 'success');
             
             // Limpiar formulario
             document.getElementById('projectName').value = '';
             document.getElementById('projectDomain').value = '';
             document.getElementById('projectDescription').value = '';
+            document.getElementById('projectUrls').value = '';
             
             await loadProjects();
             await loadStats();
@@ -274,6 +296,10 @@ function editProject(projectId) {
     document.getElementById('editProjectDescription').value = project.description || '';
     document.getElementById('editProjectActive').checked = project.active;
     
+    // Cargar URLs existentes
+    const urlsText = (project.urls || []).join('\n');
+    document.getElementById('editProjectUrls').value = urlsText;
+    
     document.getElementById('editProjectModal').classList.add('active');
 }
 
@@ -286,6 +312,7 @@ async function saveEditProject() {
     const name = document.getElementById('editProjectName').value.trim();
     const domain = document.getElementById('editProjectDomain').value.trim();
     const description = document.getElementById('editProjectDescription').value.trim();
+    const urlsText = document.getElementById('editProjectUrls').value.trim();
     const active = document.getElementById('editProjectActive').checked;
     
     if (!name || !domain) {
@@ -293,11 +320,24 @@ async function saveEditProject() {
         return;
     }
     
+    // Procesar URLs
+    let urls = [];
+    if (urlsText) {
+        urls = urlsText.split('\n')
+            .map(url => url.trim())
+            .filter(url => url && url.startsWith('http'));
+        
+        if (urls.length > 500) {
+            showMessage('⚠️ Máximo 500 URLs por proyecto. Tienes ' + urls.length, 'error');
+            return;
+        }
+    }
+    
     try {
         const response = await fetch(`/api/projects/${projectId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, domain, description, active })
+            body: JSON.stringify({ name, domain, description, urls, active })
         });
         
         const result = await response.json();

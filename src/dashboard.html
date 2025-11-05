@@ -105,6 +105,12 @@
                     <textarea id="projectDescription" placeholder="Describe el contenido o temática de este proyecto..."></textarea>
                 </div>
                 
+                <div class="form-group">
+                    <label>URLs del Proyecto (una por línea)</label>
+                    <textarea id="projectUrls" rows="8" placeholder="https://www.misitio.com/pagina1&#10;https://www.misitio.com/pagina2&#10;https://www.misitio.com/pagina3"></textarea>
+                    <small>Pega todas las URLs de tu sitio, una por línea (puedes agregar hasta 500 URLs)</small>
+                </div>
+                
                 <div class="form-grid">
                     <div class="form-group checkbox-group">
                         <input type="checkbox" id="projectAiEnabled" checked>
@@ -352,6 +358,12 @@ y ejecuta: npx wrangler deploy</textarea>
             <div class="form-group">
                 <label>Descripción</label>
                 <textarea id="editProjectDescription"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>URLs del Proyecto (una por línea)</label>
+                <textarea id="editProjectUrls" rows="10" placeholder="https://www.misitio.com/pagina1&#10;https://www.misitio.com/pagina2"></textarea>
+                <small>Puedes agregar, editar o eliminar URLs. Máximo 500 URLs por proyecto.</small>
             </div>
             
             <div class="form-group checkbox-group">
