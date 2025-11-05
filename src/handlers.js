@@ -35,8 +35,8 @@ export async function handleBulkAddProjectPosts(projectId, request, env, corsHea
   
   let newPosts = [];
   
-  // Verificar si hay API key configurada para generación de contenido
-  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
+  // Verificar si hay API key configurada para generación de contenido (SOLO desde KV)
+  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
   
   if (generateContent && aiApiKey) {
     // Generar contenido con IA para cada URL
@@ -98,11 +98,11 @@ export async function handleDeleteProjectPost(projectId, postId, env, corsHeader
 export async function handleGenerateContent(request, env, corsHeaders) {
   const { url, context, template } = await request.json();
   
-  // Verificar si hay API key configurada (en KV o env)
-  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
+  // Verificar si hay API key configurada (SOLO desde KV/Panel Web)
+  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
   if (!aiApiKey) {
     return new Response(JSON.stringify({ 
-      error: 'API Key de IA no configurada. Configúrala en el panel de Configuración.' 
+      error: 'API Key de IA no configurada. Por favor configúrala desde el Panel Web (Tab Configuración).' 
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -132,11 +132,11 @@ export async function handleGenerateContent(request, env, corsHeaders) {
 export async function handleGenerateBulkContent(request, env, corsHeaders) {
   const { urls, context, template } = await request.json();
   
-  // Verificar si hay API key configurada (en KV o env)
-  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
+  // Verificar si hay API key configurada (SOLO desde KV/Panel Web)
+  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
   if (!aiApiKey) {
     return new Response(JSON.stringify({ 
-      error: 'API Key de IA no configurada. Configúrala en el panel de Configuración.' 
+      error: 'API Key de IA no configurada. Por favor configúrala desde el Panel Web (Tab Configuración).' 
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -177,12 +177,12 @@ export async function handleGenerateBulkContent(request, env, corsHeaders) {
  * Genera contenido usando IA (OpenAI o Gemini) basándose en la URL
  */
 async function generateContentFromURL(url, context = '', env, template = '') {
-  // Obtener configuración de IA desde KV o variables de entorno
-  const aiProvider = await env.FB_PUBLISHER_KV.get('AI_PROVIDER') || env.AI_PROVIDER || 'openai';
-  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
+  // Obtener configuración de IA SOLO desde KV (Panel Web)
+  const aiProvider = await env.FB_PUBLISHER_KV.get('AI_PROVIDER') || 'openai';
+  const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
   
   if (!aiApiKey) {
-    throw new Error('API Key de IA no configurada');
+    throw new Error('API Key de IA no configurada. Por favor configúrala desde el Panel Web (Tab Configuración).');
   }
   
   // Obtener contenido de la URL
@@ -232,8 +232,8 @@ Responde SOLO con un objeto JSON con este formato:
  */
 async function generateWithOpenAI(systemPrompt, userPrompt, apiKey, env) {
   try {
-    // Obtener modelo desde KV o usar valor por defecto
-    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    // Obtener modelo SOLO desde KV (Panel Web)
+    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || 'gpt-3.5-turbo';
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -285,8 +285,8 @@ async function generateWithOpenAI(systemPrompt, userPrompt, apiKey, env) {
  */
 async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
   try {
-    // Obtener modelo desde KV o usar valor por defecto
-    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || env.GEMINI_MODEL || 'gemini-pro';
+    // Obtener modelo SOLO desde KV (Panel Web) - Sin fallback a variables de entorno
+    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || 'gemini-2.5-flash';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     // Gemini usa un formato diferente: combinar system y user prompt
@@ -607,19 +607,19 @@ export async function publishNextPost(env) {
  */
 export async function handleGetSettings(env, corsHeaders) {
   try {
-    // Obtener configuración desde KV
-    const aiProvider = await env.FB_PUBLISHER_KV.get('AI_PROVIDER') || env.AI_PROVIDER || 'openai';
+    // Obtener configuración SOLO desde KV (Panel Web)
+    const aiProvider = await env.FB_PUBLISHER_KV.get('AI_PROVIDER') || 'openai';
     const aiModel = await env.FB_PUBLISHER_KV.get('AI_MODEL');
-    const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
-    const fbPageId = await env.FB_PUBLISHER_KV.get('FB_PAGE_ID') || env.FB_PAGE_ID;
-    const fbPageAccessToken = await env.FB_PUBLISHER_KV.get('FB_PAGE_ACCESS_TOKEN') || env.FB_PAGE_ACCESS_TOKEN;
+    const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
+    const fbPageId = await env.FB_PUBLISHER_KV.get('FB_PAGE_ID');
+    const fbPageAccessToken = await env.FB_PUBLISHER_KV.get('FB_PAGE_ACCESS_TOKEN');
     
     // Determinar modelo por defecto según proveedor si no está configurado
     let defaultModel = 'gpt-3.5-turbo';
     if (aiProvider === 'gemini') {
-      defaultModel = env.GEMINI_MODEL || 'gemini-pro';
+      defaultModel = 'gemini-2.5-flash';
     } else if (aiProvider === 'openai') {
-      defaultModel = env.OPENAI_MODEL || 'gpt-3.5-turbo';
+      defaultModel = 'gpt-3.5-turbo';
     }
     
     // Ofuscar las keys para seguridad (mostrar solo primeros/últimos caracteres)
@@ -731,12 +731,12 @@ export async function handleSaveSettings(request, env, corsHeaders) {
  */
 export async function handleGenerateAllProjectPosts(projectId, env, corsHeaders) {
   try {
-    // Verificar si hay API key configurada
-    const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
+    // Verificar si hay API key configurada (SOLO desde KV/Panel Web)
+    const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
     if (!aiApiKey) {
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'API Key de IA no configurada. Configúrala en el panel de Configuración.' 
+        error: 'API Key de IA no configurada. Por favor configúrala desde el Panel Web (Tab Configuración).' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
