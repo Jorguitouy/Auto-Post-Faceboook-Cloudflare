@@ -131,54 +131,53 @@ npm run deploy
 
 Tu worker estará disponible en: `https://facebook-auto-publisher.tu-cuenta.workers.dev`
 
-### 6. Configurar desde el Panel Web
+### 6. Configurar TODO desde el Panel Web ⭐
 
-**NUEVO**: Ahora puedes configurar todo desde el navegador sin usar la terminal.
+**La forma recomendada de configurar el sistema es desde el navegador:**
 
-1. **Abre el dashboard** en la URL de tu worker
+1. **Abre el dashboard**: `https://facebook-auto-publisher.tu-cuenta.workers.dev`
 2. **Ve al tab "⚙️ Configuración"**
-3. **Ingresa tu clave de administrador** (configurada en paso 4)
+3. **Ingresa tu ADMIN_KEY** (la clave configurada en paso 4)
 4. **Selecciona proveedor de IA**:
    - **OpenAI (GPT-3.5/GPT-4)**: 
-     - API Key: https://platform.openai.com/api-keys
+     - API Key desde: https://platform.openai.com/api-keys
      - Formato: `sk-...`
      - Costo: ~$0.002/1K tokens
-   - **Google Gemini**: 
-     - API Key: https://makersuite.google.com/app/apikey
+   - **Google Gemini** (RECOMENDADO): 
+     - API Key desde: https://aistudio.google.com/app/api-keys
      - Formato: `AIza...`
      - **GRATIS** hasta 60 req/min ✅
-5. **Configura Facebook**:
+5. **Elige el modelo**:
+   - OpenAI: gpt-3.5-turbo, gpt-4, gpt-4o, gpt-4o-mini
+   - Gemini: gemini-2.5-flash (recomendado), gemini-2.5-pro, gemini-2.0-flash
+6. **Configura Facebook**:
    - Page ID y Page Access Token
    - Ver [GUIA-AUTORIZACION-FACEBOOK.md](GUIA-AUTORIZACION-FACEBOOK.md)
-6. **Guardar** y ¡listo!
+7. **Click "💾 Guardar Configuración"** → ¡Listo!
 
-### 7. (Opcional) Configurar vía Wrangler Secrets
+**✅ Ventajas de configurar desde el panel:**
+- Cambios inmediatos sin redesplegar
+- Puedes ver/editar valores en Cloudflare Dashboard → KV
+- Cambiar modelo o proveedor en segundos
+- Todo centralizado en un lugar
 
-Si prefieres configurar las credenciales mediante Wrangler en lugar del panel web:
+---
 
-```powershell
-# Clave de administrador (OBLIGATORIA)
-npx wrangler secret put ADMIN_KEY
-# Ingresa una clave segura (ej: "mi-clave-super-secreta-2024")
+### 7. (Avanzado) Ver configuración en Cloudflare Dashboard
 
-# API Key de Gemini (si usas Gemini)
-npx wrangler secret put GEMINI_API_KEY
-# Para Gemini: AIza... (desde https://aistudio.google.com/app/api-keys)
+Para verificar o editar manualmente tu configuración:
 
-# API Key de OpenAI (si usas OpenAI)
-npx wrangler secret put OPENAI_API_KEY
-# Para OpenAI: sk-...
-# Para Gemini: AIza...
+1. Ve a: https://dash.cloudflare.com
+2. **Workers & Pages** → **KV** 
+3. Click en: **FB_PUBLISHER_KV**
+4. Verás todas las configuraciones guardadas desde el panel:
+   - `AI_PROVIDER` → "gemini" o "openai"
+   - `AI_MODEL` → "gemini-2.5-flash", "gpt-4o-mini", etc.
+   - `AI_API_KEY` → Tu API Key
+   - `FB_PAGE_ID` → ID de tu página
+   - `FB_PAGE_ACCESS_TOKEN` → Token de Facebook
 
-# Configuración de Facebook
-npx wrangler secret put FB_PAGE_ACCESS_TOKEN
-# Pega tu Page Access Token (desde Graph API Explorer)
-
-npx wrangler secret put FB_PAGE_ID
-# Pega el ID de tu página de Facebook
-```
-
-**Nota**: Los valores configurados en el panel web tienen prioridad sobre los secrets de Wrangler.
+---
 
 ### 8. Desplegar
 

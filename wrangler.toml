@@ -22,16 +22,17 @@ crons = [
 binding = "FB_PUBLISHER_KV"
 id = "821ab7da6c7b45b098c0470c9abe20ab"
 
-# Variables de entorno (usa wrangler secret para los valores sensibles)
+# Variables de entorno
 [vars]
 FACEBOOK_API_VERSION = "v18.0"
-OPENAI_MODEL = "gpt-3.5-turbo"  # o "gpt-4" si tienes acceso
-GEMINI_MODEL = "gemini-pro"  # Modelo de Gemini a usar
-AI_PROVIDER = "openai"  # Proveedor por defecto: "openai" o "gemini"
 
-# Secretos (configura con: wrangler secret put SECRET_NAME)
-# ADMIN_KEY - Clave de administrador para guardar configuración desde el panel
-# FB_PAGE_ACCESS_TOKEN - Token de acceso de tu página
-# FB_PAGE_ID - ID de tu fanpage
-# OPENAI_API_KEY - API Key de OpenAI para generación de contenido (opcional)
-# AI_API_KEY - API Key del proveedor de IA (se usa en lugar de OPENAI_API_KEY si está en KV)
+# ⚠️ IMPORTANTE: Configuración de IA
+# NO configures AI_PROVIDER, AI_MODEL ni API Keys aquí.
+# Toda la configuración de IA se gestiona desde el Panel Web (tab Configuración)
+# Los valores se guardan en Cloudflare KV y tienen prioridad sobre estas variables.
+
+# Secretos requeridos (configura con: wrangler secret put SECRET_NAME)
+# ADMIN_KEY - Clave de administrador para proteger el panel de configuración (OBLIGATORIO)
+#
+# El resto de credenciales (AI_PROVIDER, AI_MODEL, AI_API_KEY, FB_PAGE_ID, FB_PAGE_ACCESS_TOKEN)
+# se configuran desde el Panel Web: https://tu-worker.workers.dev → Tab "⚙️ Configuración"
