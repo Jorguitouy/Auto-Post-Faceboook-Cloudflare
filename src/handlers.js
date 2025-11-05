@@ -232,6 +232,9 @@ Responde SOLO con un objeto JSON con este formato:
  */
 async function generateWithOpenAI(systemPrompt, userPrompt, apiKey, env) {
   try {
+    // Obtener modelo desde KV o usar valor por defecto
+    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -239,7 +242,7 @@ async function generateWithOpenAI(systemPrompt, userPrompt, apiKey, env) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: env.OPENAI_MODEL || 'gpt-3.5-turbo',
+        model: model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -282,7 +285,8 @@ async function generateWithOpenAI(systemPrompt, userPrompt, apiKey, env) {
  */
 async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
   try {
-    const model = env.GEMINI_MODEL || 'gemini-pro';
+    // Obtener modelo desde KV o usar valor por defecto
+    const model = await env.FB_PUBLISHER_KV.get('AI_MODEL') || env.GEMINI_MODEL || 'gemini-pro';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     // Gemini usa un formato diferente: combinar system y user prompt
@@ -605,9 +609,18 @@ export async function handleGetSettings(env, corsHeaders) {
   try {
     // Obtener configuración desde KV
     const aiProvider = await env.FB_PUBLISHER_KV.get('AI_PROVIDER') || env.AI_PROVIDER || 'openai';
+    const aiModel = await env.FB_PUBLISHER_KV.get('AI_MODEL');
     const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY') || env.OPENAI_API_KEY;
     const fbPageId = await env.FB_PUBLISHER_KV.get('FB_PAGE_ID') || env.FB_PAGE_ID;
     const fbPageAccessToken = await env.FB_PUBLISHER_KV.get('FB_PAGE_ACCESS_TOKEN') || env.FB_PAGE_ACCESS_TOKEN;
+    
+    // Determinar modelo por defecto según proveedor si no está configurado
+    let defaultModel = 'gpt-3.5-turbo';
+    if (aiProvider === 'gemini') {
+      defaultModel = env.GEMINI_MODEL || 'gemini-pro';
+    } else if (aiProvider === 'openai') {
+      defaultModel = env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    }
     
     // Ofuscar las keys para seguridad (mostrar solo primeros/últimos caracteres)
     const ofuscate = (str) => {
@@ -620,14 +633,13 @@ export async function handleGetSettings(env, corsHeaders) {
       success: true,
       settings: {
         aiProvider,
+        aiModel: aiModel || defaultModel,
         aiApiKeyConfigured: !!aiApiKey,
         aiApiKeyPreview: ofuscate(aiApiKey),
         fbPageId,
         fbPageIdConfigured: !!fbPageId,
         fbPageAccessTokenConfigured: !!fbPageAccessToken,
-        fbPageAccessTokenPreview: ofuscate(fbPageAccessToken),
-        geminiModel: env.GEMINI_MODEL || 'gemini-pro',
-        openaiModel: env.OPENAI_MODEL || 'gpt-3.5-turbo'
+        fbPageAccessTokenPreview: ofuscate(fbPageAccessToken)
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -678,6 +690,10 @@ export async function handleSaveSettings(request, env, corsHeaders) {
     // Guardar configuración en KV
     if (data.aiProvider) {
       await env.FB_PUBLISHER_KV.put('AI_PROVIDER', data.aiProvider);
+    }
+    
+    if (data.aiModel) {
+      await env.FB_PUBLISHER_KV.put('AI_MODEL', data.aiModel);
     }
     
     if (data.aiApiKey) {

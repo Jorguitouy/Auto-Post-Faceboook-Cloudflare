@@ -832,6 +832,12 @@ async function loadSettings() {
             // Proveedor de IA
             document.getElementById('aiProvider').value = settings.aiProvider || 'openai';
             
+            // Actualizar opciones de modelo y seleccionar el modelo actual
+            updateModelOptions();
+            if (settings.aiModel) {
+                document.getElementById('aiModel').value = settings.aiModel;
+            }
+            
             // Estado de API Key de IA
             if (settings.aiApiKeyConfigured) {
                 document.getElementById('aiApiKeyStatus').textContent = `✓ Configurada: ${settings.aiApiKeyPreview}`;
@@ -877,6 +883,7 @@ async function saveSettings() {
     
     const settings = {
         aiProvider: document.getElementById('aiProvider').value,
+        aiModel: document.getElementById('aiModel').value,
         aiApiKey: document.getElementById('aiApiKey').value.trim() || undefined,
         fbPageId: document.getElementById('fbPageId').value.trim() || undefined,
         fbPageAccessToken: document.getElementById('fbPageAccessToken').value.trim() || undefined
@@ -932,6 +939,47 @@ function resetSettingsForm() {
     loadSettings();
 }
 
+function updateModelOptions() {
+    const provider = document.getElementById('aiProvider').value;
+    const modelSelect = document.getElementById('aiModel');
+    
+    // Limpiar opciones actuales
+    modelSelect.innerHTML = '';
+    
+    if (provider === 'openai') {
+        const models = [
+            { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Rápido y económico)', cost: '~$0.002/1K tokens' },
+            { value: 'gpt-4', label: 'GPT-4 (Más preciso)', cost: '~$0.03/1K tokens' },
+            { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Equilibrado)', cost: '~$0.01/1K tokens' },
+            { value: 'gpt-4o', label: 'GPT-4o (Más reciente)', cost: '~$0.005/1K tokens' },
+            { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Más económico)', cost: '~$0.00015/1K tokens' }
+        ];
+        
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = `${model.label} - ${model.cost}`;
+            modelSelect.appendChild(option);
+        });
+    } else if (provider === 'gemini') {
+        const models = [
+            { value: 'gemini-pro', label: 'Gemini Pro (Gratis)', features: '60 req/min' },
+            { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Gratis)', features: '2 req/min' },
+            { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Gratis, más rápido)', features: '15 req/min' },
+            { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash Experimental (Gratis)', features: '10 req/min' }
+        ];
+        
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.value;
+            option.textContent = `${model.label} - ${model.features}`;
+            modelSelect.appendChild(option);
+        });
+    }
+    
+    updateAIProviderInfo();
+}
+
 function updateAIProviderInfo() {
     const provider = document.getElementById('aiProvider').value;
     const infoDiv = document.getElementById('aiProviderInfo');
@@ -941,13 +989,15 @@ function updateAIProviderInfo() {
         infoText.innerHTML = `
             <strong>OpenAI (GPT)</strong><br>
             Obtén tu API Key en: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a><br>
-            Modelos: gpt-3.5-turbo, gpt-4 (configurable en wrangler.toml)
+            <strong>💰 Costo variable:</strong> Desde $0.00015/1K tokens (GPT-4o Mini) hasta $0.03/1K tokens (GPT-4)<br>
+            <strong>⚡ Recomendado:</strong> GPT-4o Mini para mejor relación calidad/precio
         `;
     } else if (provider === 'gemini') {
         infoText.innerHTML = `
-            <strong>Google Gemini</strong><br>
+            <strong>Google Gemini ✨ GRATIS</strong><br>
             Obtén tu API Key en: <a href="https://makersuite.google.com/app/apikey" target="_blank">makersuite.google.com/app/apikey</a><br>
-            Modelo: gemini-pro (configurable en wrangler.toml)
+            <strong>🎉 Completamente gratis:</strong> Hasta 60 req/min (Gemini Pro) o 15 req/min (Gemini 1.5 Flash)<br>
+            <strong>⚡ Recomendado:</strong> Gemini 1.5 Flash para mejor velocidad
         `;
     }
     
@@ -955,9 +1005,12 @@ function updateAIProviderInfo() {
 }
 
 // Event listener para cambio de proveedor
-document.addEventListener('DOMContentLoaded', () => {
-    const aiProviderSelect = document.getElementById('aiProvider');
-    if (aiProviderSelect) {
-        aiProviderSelect.addEventListener('change', updateAIProviderInfo);
-    }
-});
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const aiProviderSelect = document.getElementById('aiProvider');
+        if (aiProviderSelect) {
+            // Inicializar opciones de modelo al cargar
+            updateModelOptions();
+        }
+    });
+}
