@@ -1,3 +1,26 @@
+/*
+ * dashboard.js
+ * Lógica frontend del Panel de Control (gestión de proyectos, posts, IA, ajustes).
+ * Este archivo interactúa con las siguientes rutas de la API del Worker:
+ *  - GET  /api/stats
+ *  - GET  /api/projects
+ *  - POST /api/projects
+ *  - PUT  /api/projects/:id
+ *  - DELETE /api/projects/:id
+ *  - GET  /api/projects/:id/posts
+ *  - POST /api/projects/:id/posts
+ *  - POST /api/publish
+ *  - POST /api/generate-content
+ *
+ * Referencias y documentación:
+ *  - README: https://github.com/Jorguitouy/Facebook-Autopost-Cloudflare#readme
+ *  - Guía de Autorización (Facebook OAuth): GUIA-AUTORIZACION-FACEBOOK.md
+ *  - Open Graph guide: OPEN-GRAPH-GUIDE.md
+ *
+ * Nota de despliegue:
+ *  - Asegúrate de que `/dashboard.css` y `/dashboard.js` sean servidos por el Worker/Pages.
+ */
+
 // Estado global de la aplicación
 let currentProject = null;
 let projects = [];
