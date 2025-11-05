@@ -390,6 +390,7 @@ export function generateId() {
 
 /**
  * Publica un post en Facebook usando la Graph API
+ * Facebook extraerá automáticamente Open Graph tags de la URL
  */
 export async function publishToFacebook(post, env) {
   const pageAccessToken = env.FB_PAGE_ACCESS_TOKEN;
@@ -402,18 +403,22 @@ export async function publishToFacebook(post, env) {
 
   const apiUrl = `https://graph.facebook.com/${apiVersion}/${pageId}/feed`;
 
-  // Preparar el mensaje con la URL
-  const message = `${post.message}\n\n${post.url}`;
-
   try {
+    // Facebook extraerá automáticamente:
+    // - og:title (título)
+    // - og:description (descripción)
+    // - og:image (imagen destacada)
+    // - og:url (URL canónica)
+    // desde los meta tags de la página
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: message,
-        link: post.url,
+        message: post.message,           // Tu mensaje personalizado
+        link: post.url,                  // Facebook procesará esta URL
         access_token: pageAccessToken,
       }),
     });

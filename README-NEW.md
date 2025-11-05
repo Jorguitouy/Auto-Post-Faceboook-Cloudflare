@@ -10,6 +10,13 @@ Sistema automatizado profesional para publicar contenido en Facebook desde múlt
 - **Estadísticas individuales** por proyecto
 - **Activación/desactivación** selectiva de proyectos
 
+### 🎨 Open Graph Integration
+- **Facebook extrae automáticamente** título, descripción e imagen de tus URLs
+- **Tarjetas visuales profesionales** sin esfuerzo adicional
+- **Solo implementa Open Graph tags** una vez en cada sitio
+- **Publicaciones más atractivas** con imágenes destacadas
+- **Ver guía completa:** [OPEN-GRAPH-GUIDE.md](OPEN-GRAPH-GUIDE.md)
+
 ### 🤖 Generación de Contenido con IA
 - **OpenAI GPT** integrado para crear contenido automáticamente
 - **Análisis de URLs** para generar mensajes relevantes
@@ -262,6 +269,25 @@ Con 3 publicaciones al día × 7 proyectos = 21 publicaciones/día
 - ✅ CORS configurado
 - ✅ Autenticación de Facebook OAuth
 - ✅ Validación de datos en el backend
+
+## 🎨 Open Graph Tags
+
+Facebook extrae automáticamente información de tus URLs si tienes Open Graph tags en tus páginas:
+
+```html
+<meta property="og:title" content="Título del Artículo">
+<meta property="og:description" content="Descripción breve">
+<meta property="og:image" content="https://tusitio.com/imagen.jpg">
+<meta property="og:url" content="https://tusitio.com/articulo">
+```
+
+**Resultado:**
+- ✅ Tarjeta visual con imagen destacada
+- ✅ Título y descripción automáticos
+- ✅ Publicaciones más profesionales
+- ✅ Mayor engagement (+30% CTR)
+
+**📖 Guía completa:** Ver [OPEN-GRAPH-GUIDE.md](OPEN-GRAPH-GUIDE.md) para implementar en tus sitios.
 
 ## 🛠️ Desarrollo Local
 
