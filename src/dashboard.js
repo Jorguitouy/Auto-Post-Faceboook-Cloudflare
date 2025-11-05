@@ -540,24 +540,57 @@ function renderPosts(posts, projectId) {
         `;
     }
     
-    return posts.map(post => `
-        <div class="post-item ${post.status}">
-            <div class="post-content">
-                <div class="post-url">${post.url}</div>
-                <div class="post-message">${post.message}</div>
-                <div class="post-meta">
-                    <span class="post-status ${post.status}">${getStatusLabel(post.status)}</span>
-                    ${post.aiGenerated ? '<span class="post-status" style="background: rgba(147, 51, 234, 0.1); color: #9333ea;">🤖 IA</span>' : ''}
-                    ${post.publishedAt ? `<span class="post-date">📅 ${formatDate(post.publishedAt)}</span>` : ''}
-                    ${post.errorAt ? `<span class="post-date" style="color: var(--danger);">❌ ${post.lastError}</span>` : ''}
-                </div>
+    // Barra de acciones para selección múltiple
+    const selectionBar = `
+        <div class="selection-bar" id="selectionBar" style="display: none; margin-bottom: 15px; padding: 15px; background: var(--card-bg); border-radius: 8px; border: 2px solid var(--primary);">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <span id="selectedCount" style="font-weight: 600; color: var(--primary);">0 seleccionados</span>
+                <button class="danger" onclick="deleteSelectedPosts('${projectId}')" style="padding: 8px 16px;">
+                    🗑️ Eliminar seleccionados
+                </button>
+                <button class="secondary" onclick="clearSelection()" style="padding: 8px 16px;">
+                    ✖️ Cancelar selección
+                </button>
             </div>
-            <div class="post-actions">
-                ${post.status === 'pending' ? `<button class="success" onclick="publishSpecificPost('${projectId}', '${post.id}')">▶️ Publicar</button>` : ''}
-                <button class="danger" onclick="deletePost('${projectId}', '${post.id}')">🗑️</button>
+        </div>
+    `;
+    
+    // Checkbox para seleccionar todos
+    const selectAllCheckbox = `
+        <div style="padding: 12px 15px; background: var(--card-bg); border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border);">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="selectAllPosts" onchange="toggleSelectAll()" 
+                       style="width: 18px; height: 18px; cursor: pointer;">
+                <span style="font-weight: 600;">Seleccionar todos (${posts.length} posts)</span>
+            </label>
+        </div>
+    `;
+    
+    const postsHtml = posts.map(post => `
+        <div class="post-item ${post.status}" data-post-id="${post.id}">
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <input type="checkbox" class="post-checkbox" data-post-id="${post.id}" 
+                       onchange="updateSelection()" 
+                       style="width: 18px; height: 18px; margin-top: 4px; cursor: pointer; flex-shrink: 0;">
+                <div class="post-content" style="flex: 1;">
+                    <div class="post-url">${post.url}</div>
+                    <div class="post-message">${post.message}</div>
+                    <div class="post-meta">
+                        <span class="post-status ${post.status}">${getStatusLabel(post.status)}</span>
+                        ${post.aiGenerated ? '<span class="post-status" style="background: rgba(147, 51, 234, 0.1); color: #9333ea;">🤖 IA</span>' : ''}
+                        ${post.publishedAt ? `<span class="post-date">📅 ${formatDate(post.publishedAt)}</span>` : ''}
+                        ${post.errorAt ? `<span class="post-date" style="color: var(--danger);">❌ ${post.lastError}</span>` : ''}
+                    </div>
+                </div>
+                <div class="post-actions" style="flex-shrink: 0;">
+                    ${post.status === 'pending' ? `<button class="success" onclick="publishSpecificPost('${projectId}', '${post.id}')">▶️</button>` : ''}
+                    <button class="danger" onclick="deletePost('${projectId}', '${post.id}')">🗑️</button>
+                </div>
             </div>
         </div>
     `).join('');
+    
+    return selectionBar + selectAllCheckbox + postsHtml;
 }
 
 function getStatusLabel(status) {
@@ -1218,3 +1251,111 @@ if (typeof document !== 'undefined') {
         }
     });
 }
+
+// ========== FUNCIONES DE SELECCIÓN MÚLTIPLE ==========
+
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllPosts');
+    const checkboxes = document.querySelectorAll('.post-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateSelection();
+}
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.post-checkbox');
+    const checkedBoxes = document.querySelectorAll('.post-checkbox:checked');
+    const selectAllCheckbox = document.getElementById('selectAllPosts');
+    const selectionBar = document.getElementById('selectionBar');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    // Actualizar contador
+    if (selectedCount) {
+        selectedCount.textContent = `${checkedBoxes.length} seleccionado${checkedBoxes.length !== 1 ? 's' : ''}`;
+    }
+    
+    // Mostrar/ocultar barra de selección
+    if (selectionBar) {
+        selectionBar.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
+    }
+    
+    // Actualizar estado del checkbox "seleccionar todos"
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = checkboxes.length > 0 && checkedBoxes.length === checkboxes.length;
+        selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < checkboxes.length;
+    }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.post-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllPosts');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    }
+    
+    updateSelection();
+}
+
+async function deleteSelectedPosts(projectId) {
+    const checkedBoxes = document.querySelectorAll('.post-checkbox:checked');
+    const postIds = Array.from(checkedBoxes).map(cb => cb.dataset.postId);
+    
+    if (postIds.length === 0) {
+        showMessage('⚠️ No hay posts seleccionados', 'error');
+        return;
+    }
+    
+    const confirmMsg = `¿Eliminar ${postIds.length} post${postIds.length !== 1 ? 's' : ''} seleccionado${postIds.length !== 1 ? 's' : ''}?`;
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    try {
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Eliminar posts uno por uno
+        for (const postId of postIds) {
+            try {
+                const response = await fetch(`/api/projects/${projectId}/posts/${postId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            } catch (error) {
+                errorCount++;
+                console.error(`Error eliminando post ${postId}:`, error);
+            }
+        }
+        
+        // Mostrar resultado
+        if (errorCount === 0) {
+            showMessage(`✅ ${successCount} post${successCount !== 1 ? 's' : ''} eliminado${successCount !== 1 ? 's' : ''}`, 'success');
+        } else {
+            showMessage(`⚠️ ${successCount} eliminados, ${errorCount} errores`, 'error');
+        }
+        
+        // Recargar lista
+        await loadProjectPosts();
+        await loadStats();
+        clearSelection();
+        
+    } catch (error) {
+        showMessage('❌ Error eliminando posts: ' + error.message, 'error');
+    }
+}
+
