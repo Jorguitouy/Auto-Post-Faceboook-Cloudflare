@@ -488,7 +488,14 @@ async function loadProjectPosts() {
     currentProject = project;
     
     try {
-        const response = await fetch(`/api/projects/${projectId}/posts`);
+        const response = await fetch(`/api/projects/${projectId}/posts?_=${Date.now()}`, {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         const data = await response.json();
         const posts = data.posts || [];
         
@@ -714,27 +721,37 @@ async function deletePost(projectId, postId) {
     if (!confirm('¿Eliminar este post?')) return;
     
     try {
+        console.log(`Eliminando post individual: ${postId}`);
         const response = await fetch(`/api/projects/${projectId}/posts/${postId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            cache: 'no-cache'
         });
         
         const result = await response.json();
+        console.log(`Resultado eliminación:`, result);
         
-        if (result.success) {
+        if (result.success && result.deleted) {
             showMessage('✅ Post eliminado', 'success');
             
-            // Remover visualmente el post eliminado
+            // Remover visualmente el post eliminado de inmediato
             const postElement = document.querySelector(`.post-item[data-post-id="${postId}"]`);
             if (postElement) {
                 postElement.remove();
             }
             
+            // Esperar un momento antes de recargar
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             // Recargar lista completa para actualizar contadores
+            console.log('Recargando lista...');
             await loadProjectPosts();
             await loadStats();
+        } else {
+            showMessage('⚠️ No se pudo eliminar el post', 'error');
         }
     } catch (error) {
         showMessage('❌ Error: ' + error.message, 'error');
+        console.error('Error en deletePost:', error);
     }
 }
 
@@ -1408,15 +1425,25 @@ async function deleteSelectedPosts(projectId) {
         // Eliminar posts uno por uno
         for (const postId of postIds) {
             try {
+                console.log(`Eliminando post: ${postId}`);
                 const response = await fetch(`/api/projects/${projectId}/posts/${postId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    cache: 'no-cache'
                 });
                 
                 const result = await response.json();
-                if (result.success) {
+                console.log(`Resultado eliminación ${postId}:`, result);
+                
+                if (result.success && result.deleted) {
                     successCount++;
+                    // Remover visualmente de inmediato
+                    const postElement = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+                    if (postElement) {
+                        postElement.remove();
+                    }
                 } else {
                     errorCount++;
+                    console.error(`No se pudo eliminar ${postId}:`, result);
                 }
             } catch (error) {
                 errorCount++;
@@ -1431,21 +1458,18 @@ async function deleteSelectedPosts(projectId) {
             showMessage(`⚠️ ${successCount} eliminados, ${errorCount} errores`, 'error');
         }
         
-        // Remover visualmente los posts eliminados de la lista
-        postIds.forEach(postId => {
-            const postElement = document.querySelector(`.post-item[data-post-id="${postId}"]`);
-            if (postElement) {
-                postElement.remove();
-            }
-        });
+        // Esperar un momento antes de recargar para asegurar que KV se actualice
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Recargar lista completa para actualizar contadores
+        console.log('Recargando lista de posts...');
         await loadProjectPosts();
         await loadStats();
         clearSelection();
         
     } catch (error) {
         showMessage('❌ Error eliminando posts: ' + error.message, 'error');
+        console.error('Error en deleteSelectedPosts:', error);
     }
 }
 
