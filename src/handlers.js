@@ -123,8 +123,9 @@ export async function handleGenerateContent(request, env, corsHeaders) {
     const content = await generateContentFromURL(url, context, env, template);
     
     return new Response(JSON.stringify({ 
-      success: true, 
-      content 
+      success: true,
+      title: content.title,
+      message: content.message
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -260,13 +261,13 @@ Descripción: Contenido de ${url.split('//')[1]?.split('/')[0] || 'nuestro sitio
   }
 
   // Crear el prompt optimizado
-  const systemPrompt = template || `Experto en marketing de Facebook. Crea posts cortos, atractivos con emojis.`;
+  const systemPrompt = template || `Experto en marketing de Facebook. Crea UN SOLO post corto y atractivo con emojis.`;
 
   const userPrompt = `Post para Facebook sobre:
 ${pageContent}
 ${context ? `\nContexto: ${context}` : ''}
 
-JSON format:
+Responde SOLO con este formato JSON (un solo objeto):
 {"title":"Título corto","message":"Mensaje max 200 chars con emojis"}`;
 
   console.log(`[generateContentFromURL] Llamando a ${aiProvider}...`);
@@ -399,9 +400,13 @@ async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const parsed = JSON.parse(cleanContent);
       console.log(`[generateWithGemini] JSON parseado correctamente`);
+      
+      // Si es un array, tomar el primer elemento
+      const data = Array.isArray(parsed) ? parsed[0] : parsed;
+      
       return {
-        title: parsed.title || '',
-        message: parsed.message || content
+        title: data.title || '',
+        message: data.message || content.substring(0, 200)
       };
     } catch (e) {
       console.log(`[generateWithGemini] No es JSON válido, usando contenido directo`);
