@@ -722,6 +722,14 @@ async function deletePost(projectId, postId) {
         
         if (result.success) {
             showMessage('✅ Post eliminado', 'success');
+            
+            // Remover visualmente el post eliminado
+            const postElement = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+            if (postElement) {
+                postElement.remove();
+            }
+            
+            // Recargar lista completa para actualizar contadores
             await loadProjectPosts();
             await loadStats();
         }
@@ -1466,7 +1474,15 @@ async function deleteSelectedPosts(projectId) {
             showMessage(`⚠️ ${successCount} eliminados, ${errorCount} errores`, 'error');
         }
         
-        // Recargar lista
+        // Remover visualmente los posts eliminados de la lista
+        postIds.forEach(postId => {
+            const postElement = document.querySelector(`.post-item[data-post-id="${postId}"]`);
+            if (postElement) {
+                postElement.remove();
+            }
+        });
+        
+        // Recargar lista completa para actualizar contadores
         await loadProjectPosts();
         await loadStats();
         clearSelection();
