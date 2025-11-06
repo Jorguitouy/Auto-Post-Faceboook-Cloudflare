@@ -7,7 +7,8 @@
 │  🏗️  SISTEMA MULTI-PROYECTO CON IA                         │
 │     ✓ Panel de Control Profesional                         │
 │     ✓ Gestión por Proyectos Separados                      │
-│     ✓ Generación Automática con OpenAI                     │
+│     ✓ Múltiples Fanpages Independientes (NUEVO)            │
+│     ✓ Generación Automática con OpenAI/Gemini              │
 │     ✓ Publicación Automática en Facebook                   │
 │     ✓ 100% Serverless con Cloudflare                       │
 └─────────────────────────────────────────────────────────────┘
@@ -24,6 +25,8 @@
 ├───────────────────────────────────────────────────────────┤
 │  📁 PROYECTOS                                             │
 │  • Crear proyecto por cada sitio web                     │
+│  • Conectar fanpage independiente por proyecto (NUEVO)   │
+│  • Estado de conexión Facebook visible                   │
 │  • Configuración independiente                           │
 │  • Activar/desactivar selectivamente                     │
 │  • Estadísticas por proyecto                             │
@@ -35,15 +38,17 @@
 │  • Publicación manual selectiva                          │
 ├───────────────────────────────────────────────────────────┤
 │  🤖 GENERADOR IA                                          │
+│  • OpenAI o Google Gemini                                │
 │  • Generación individual con preview                     │
 │  • Generación en lote (hasta 200 URLs)                   │
 │  • Personalización con contexto                          │
 │  • Edición antes de guardar                              │
 ├───────────────────────────────────────────────────────────┤
 │  ⚙️ CONFIGURACIÓN                                         │
+│  • Configuración de IA desde el panel                    │
+│  • Gestión de credenciales por proyecto                  │
 │  • Guías de setup                                        │
 │  • Ejemplos de comandos                                  │
-│  • Enlaces a documentación                               │
 │  • Tips y mejores prácticas                              │
 └───────────────────────────────────────────────────────────┘
 ```
@@ -56,9 +61,17 @@
    [Proyecto A: Blog Personal]
    [Proyecto B: E-commerce]
    [Proyecto C: Portfolio]
-   ... (hasta 7 proyectos)
+   ... (hasta 7 proyectos o más)
 
-2. AGREGAR URLs CON IA
+2. CONECTAR FANPAGES (NUEVO)
+   ↓
+   Proyecto A → [Conectar] → Fanpage Personal
+   Proyecto B → [Conectar] → Fanpage Tienda
+   Proyecto C → [Conectar] → Fanpage Portfolio
+   ↓
+   Cada proyecto publica en su propia fanpage
+
+3. AGREGAR URLs CON IA
    ↓
    Pegar 200 URLs
    ↓
@@ -66,19 +79,21 @@
    ↓
    Posts guardados como "pendientes"
 
-3. PUBLICACIÓN AUTOMÁTICA
+4. PUBLICACIÓN AUTOMÁTICA
    ↓
    Cron ejecuta 3x/día
    ↓
    Selecciona siguiente post pendiente
    ↓
-   Publica en Facebook
+   Publica en la fanpage del proyecto
    ↓
    Marca como "publicado"
 
-4. MONITOREO
+5. MONITOREO
    ↓
    Ver estadísticas en dashboard
+   ↓
+   Estado de conexión por proyecto
    ↓
    Revisar posts publicados/errores
    ↓
@@ -133,21 +148,29 @@ Abre: https://tu-worker.workers.dev
 ┌─────────────────────────────────────────────────────┐
 │  CASO 1: Blogger con múltiples sitios              │
 │  • 3 blogs diferentes                              │
+│  • Cada blog → su propia fanpage                   │
 │  • 50 artículos por blog                           │
 │  • Mensajes personalizados con IA                  │
 │  • Publicación distribuida                         │
 ├─────────────────────────────────────────────────────┤
 │  CASO 2: Agencia de marketing                      │
 │  • 7 clientes diferentes                           │
-│  • Cada cliente = 1 proyecto                       │
+│  • Cada cliente = 1 proyecto + 1 fanpage           │
 │  • Gestión separada por cliente                    │
+│  • Credenciales aisladas                           │
 │  • Reportes individuales                           │
 ├─────────────────────────────────────────────────────┤
-│  CASO 3: E-commerce con categorías                 │
-│  • Productos nuevos                                │
-│  • Ofertas especiales                              │
-│  • Reviews de clientes                             │
-│  • Publicación automática diaria                   │
+│  CASO 3: E-commerce multicanal                     │
+│  • Tienda Principal → Fanpage Principal            │
+│  • Outlet → Fanpage Ofertas                        │
+│  • Blog → Fanpage Contenido                        │
+│  • Publicación automática segmentada               │
+├─────────────────────────────────────────────────────┤
+│  CASO 4: Sitios multilenguaje (NUEVO)              │
+│  • Sitio EN → Fanpage English                      │
+│  • Sitio ES → Fanpage Español                      │
+│  • Sitio PT → Fanpage Português                    │
+│  • Contenido localizado por audiencia              │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -185,18 +208,24 @@ Abre: https://tu-worker.workers.dev
 ## 🎯 VENTAJAS DEL SISTEMA
 
 ```
-✅ MULTI-PROYECTO
-   • Organización por sitio web
-   • Configuración independiente
+✅ MULTI-PROYECTO CON MÚLTIPLES FANPAGES (NUEVO)
+   • Cada proyecto → su propia fanpage
+   • Credenciales aisladas por proyecto
+   • Publicación independiente
+   • Organización por sitio web/cliente
    • Estadísticas separadas
 
 ✅ GENERACIÓN CON IA
+   • OpenAI o Google Gemini
    • Contenido personalizado
    • Ahorra tiempo (200 posts en minutos)
    • Mensajes optimizados para engagement
+   • Configuración desde el panel web
 
 ✅ PANEL PROFESIONAL
    • Interfaz gráfica moderna
+   • Estado de conexión visible
+   • Conectar/desconectar fanpages fácil
    • Fácil de usar
    • No requiere conocimientos técnicos
 
@@ -204,14 +233,17 @@ Abre: https://tu-worker.workers.dev
    • Publica sin intervención
    • Horarios personalizables
    • Distribución inteligente
+   • Solo publica proyectos conectados
 
 ✅ SIN COSTOS
    • Cloudflare 100% gratis
    • OpenAI: ~$0.20 para 200 posts
+   • Gemini: gratis o muy barato
    • Sin servidores que mantener
 
 ✅ ESCALABLE
    • Agregar más proyectos fácilmente
+   • Más fanpages sin límite
    • Más URLs sin límite
    • Crece con tu negocio
 ```
@@ -224,13 +256,16 @@ Abre: https://tu-worker.workers.dev
 
 📖 Documentación Completa:
    → README-NEW.md (Guía detallada)
+   → MULTI-PROYECTO-FACEBOOK.md (Múltiples fanpages - NUEVO)
    → INSTRUCCIONES-FINALES.md (Setup completo)
+   → GUIA-AUTORIZACION-FACEBOOK.md (OAuth Facebook)
    → scripts/setup.js (Asistente de configuración)
 
 🌐 Servicios Necesarios:
    → Cloudflare Workers: https://workers.cloudflare.com
    → Facebook Developers: https://developers.facebook.com
    → OpenAI API: https://platform.openai.com
+   → Google AI Studio: https://ai.google.dev
 
 🛠️ Herramientas Útiles:
    → Crontab Guru: https://crontab.guru
@@ -241,42 +276,54 @@ Abre: https://tu-worker.workers.dev
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  AHORA MISMO (10 minutos)                           │
-│  □ Reemplazar src/index.js con index-new.js        │
-│  □ npm install                                      │
-│  □ npm run deploy                                   │
+│  AHORA MISMO (5 minutos)                            │
+│  ✅ Sistema ya desplegado                           │
+│  □ Configurar Facebook App (App ID y Secret)       │
+│  □ Configurar secrets en Cloudflare                │
 ├─────────────────────────────────────────────────────┤
 │  HOY (30 minutos)                                   │
-│  □ Configurar credenciales Facebook                 │
-│  □ Configurar OpenAI API key                        │
-│  □ Crear tus 7 proyectos                            │
+│  □ Crear tu primer proyecto                         │
+│  □ Conectar tu fanpage al proyecto                  │
+│  □ Configurar IA desde el panel (OpenAI o Gemini)  │
+│  □ Agregar algunas URLs de prueba                   │
 ├─────────────────────────────────────────────────────┤
 │  ESTA SEMANA (1 hora)                               │
+│  □ Crear más proyectos                              │
+│  □ Conectar diferentes fanpages                     │
 │  □ Agregar las 200 URLs con IA                      │
+│  □ Hacer publicaciones de prueba                    │
 │  □ Revisar y ajustar horarios                       │
-│  □ Hacer publicación de prueba                      │
 ├─────────────────────────────────────────────────────┤
 │  DESPUÉS                                            │
-│  □ Monitorear estadísticas                          │
+│  □ Monitorear estadísticas por proyecto             │
+│  □ Verificar conexiones de fanpages                 │
 │  □ Optimizar mensajes si necesario                  │
-│  □ Agregar más URLs cuando quieras                  │
+│  □ Agregar más proyectos/URLs cuando quieras        │
 └─────────────────────────────────────────────────────┘
 ```
 
 ## 🎉 ¡FELICITACIONES!
 
 Has creado un sistema profesional de auto-publicación que:
-• Gestiona 7 sitios web simultáneamente
+• Gestiona múltiples sitios web simultáneamente
+• **Publica en diferentes fanpages independientes** (NUEVO)
 • Genera contenido automáticamente con IA
-• Publica 200 URLs sin esfuerzo
+• Publica 200+ URLs sin esfuerzo
 • Tiene un panel de control completo
 • Es 100% serverless y escalable
+• Ideal para agencias y múltiples clientes
 
-**Todo listo en:**
+**Sistema desplegado en:**
+`https://facebook-auto-publisher.jorgeferreirauy.workers.dev`
+
+**Código en GitHub:**
 `https://github.com/Jorguitouy/Facebook-Autopost-Cloudflare`
 
-**¿Preguntas?** Lee `INSTRUCCIONES-FINALES.md` 📖
+**¿Preguntas?** Lee:
+• `MULTI-PROYECTO-FACEBOOK.md` - Guía de múltiples fanpages
+• `INSTRUCCIONES-FINALES.md` - Setup completo
+• `GUIA-AUTORIZACION-FACEBOOK.md` - OAuth Facebook
 
 ---
 
-**¡Éxito con tu automatización! 🚀**
+**¡Éxito con tu automatización multi-fanpage! 🚀**
