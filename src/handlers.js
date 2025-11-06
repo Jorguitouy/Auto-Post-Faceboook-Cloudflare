@@ -106,7 +106,7 @@ export async function handleDeleteProjectPost(projectId, postId, env, corsHeader
 // ========================================
 
 export async function handleGenerateContent(request, env, corsHeaders) {
-  const { url, context, template } = await request.json();
+  const { projectId, url, context, template } = await request.json();
   
   // Verificar si hay API key configurada (SOLO desde KV/Panel Web)
   const aiApiKey = await env.FB_PUBLISHER_KV.get('AI_API_KEY');
@@ -119,8 +119,24 @@ export async function handleGenerateContent(request, env, corsHeaders) {
     });
   }
 
+  // Obtener el aiPrompt del proyecto si existe
+  let projectAiPrompt = '';
+  if (projectId) {
+    const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+    const project = projects.projects.find(p => p.id === projectId);
+    if (project && project.aiPrompt) {
+      projectAiPrompt = project.aiPrompt;
+      console.log(`[handleGenerateContent] Usando prompt del proyecto: ${projectAiPrompt.substring(0, 100)}...`);
+    }
+  }
+
   try {
-    const content = await generateContentFromURL(url, context, env, template);
+    // Combinar el prompt del proyecto con el context adicional
+    const finalContext = projectAiPrompt 
+      ? (context ? `${projectAiPrompt}\n\nContexto adicional: ${context}` : projectAiPrompt)
+      : context;
+    
+    const content = await generateContentFromURL(url, finalContext, env, template);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -202,8 +218,7 @@ async function generateContentFromURL(url, context = '', env, template = '') {
   
   // Obtener contenido de la URL
   let pageContent = '';
-  let pageTitle = '';
-  let pageDescription = '';
+  let htmlContext = '';
   
   try {
     console.log(`[generateContentFromURL] Obteniendo contenido de: ${url}`);
@@ -221,54 +236,156 @@ async function generateContentFromURL(url, context = '', env, template = '') {
     const html = await response.text();
     console.log(`[generateContentFromURL] HTML obtenido, tamaño: ${html.length} caracteres`);
     
-    // Extraer título
+    // Extraer información clave del HTML para darle contexto a la IA
+    
+    // 1. Meta tags
     const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-    pageTitle = titleMatch ? titleMatch[1].trim() : '';
+    const title = titleMatch ? titleMatch[1].trim() : '';
     
-    // Extraer meta description
     const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["'](.*?)["']/i);
-    pageDescription = descMatch ? descMatch[1].trim() : '';
+    const description = descMatch ? descMatch[1].trim() : '';
     
-    // Extraer Open Graph
-    if (!pageTitle) {
-      const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["'](.*?)["']/i);
-      pageTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+    const keywordsMatch = html.match(/<meta\s+name=["']keywords["']\s+content=["'](.*?)["']/i);
+    const keywords = keywordsMatch ? keywordsMatch[1].trim() : '';
+    
+    // 2. Open Graph
+    const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["'](.*?)["']/i);
+    const ogTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+    
+    const ogDescMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["'](.*?)["']/i);
+    const ogDescription = ogDescMatch ? ogDescMatch[1].trim() : '';
+    
+    // 3. Encabezados H1-H3 (más cantidad para mejor contexto)
+    const h1Matches = html.match(/<h1[^>]*>(.*?)<\/h1>/gi) || [];
+    const h1Texts = h1Matches.slice(0, 10).map(h => h.replace(/<[^>]*>/g, '').trim()).filter(t => t.length > 0);
+    
+    const h2Matches = html.match(/<h2[^>]*>(.*?)<\/h2>/gi) || [];
+    const h2Texts = h2Matches.slice(0, 10).map(h => h.replace(/<[^>]*>/g, '').trim()).filter(t => t.length > 0);
+    
+    const h3Matches = html.match(/<h3[^>]*>(.*?)<\/h3>/gi) || [];
+    const h3Texts = h3Matches.slice(0, 10).map(h => h.replace(/<[^>]*>/g, '').trim()).filter(t => t.length > 0);
+    
+    // 4. Primeros 5 párrafos de contenido (más contexto)
+    const pMatches = html.match(/<p[^>]*>(.*?)<\/p>/gi) || [];
+    const paragraphs = pMatches.slice(0, 5).map(p => p.replace(/<[^>]*>/g, '').trim()).filter(p => p.length > 30);
+    
+    // 5. Schema.org JSON-LD (completo)
+    const schemaMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>(.*?)<\/script>/is);
+    let schemaText = '';
+    if (schemaMatch) {
+      try {
+        const schemaJson = JSON.parse(schemaMatch[1]);
+        // Extraer solo los campos más relevantes del schema
+        const relevantFields = {};
+        const extractFields = (obj, prefix = '') => {
+          if (typeof obj !== 'object' || obj === null) return;
+          for (const [key, value] of Object.entries(obj)) {
+            if (key === '@context' || key === '@id') continue;
+            if (typeof value === 'string' && value.length < 300) {
+              relevantFields[prefix + key] = value;
+            } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+              relevantFields[prefix + key] = value.slice(0, 3).join(', ');
+            } else if (typeof value === 'object' && key !== '@graph') {
+              extractFields(value, prefix + key + '.');
+            }
+          }
+        };
+        extractFields(schemaJson);
+        schemaText = JSON.stringify(relevantFields, null, 2);
+        console.log(`[generateContentFromURL] Schema.org extraído: ${Object.keys(relevantFields).length} campos`);
+      } catch (e) {
+        console.log(`[generateContentFromURL] Error parseando Schema.org: ${e.message}`);
+      }
     }
     
-    if (!pageDescription) {
-      const ogDescMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["'](.*?)["']/i);
-      pageDescription = ogDescMatch ? ogDescMatch[1].trim() : '';
-    }
-    
-    // Extraer primeros párrafos de contenido
-    const contentMatch = html.match(/<p[^>]*>(.*?)<\/p>/i);
-    const firstParagraph = contentMatch ? contentMatch[1].replace(/<[^>]*>/g, '').trim() : '';
-    
-    console.log(`[generateContentFromURL] Título: ${pageTitle}`);
-    console.log(`[generateContentFromURL] Descripción: ${pageDescription}`);
-    
-    pageContent = `URL: ${url}
-Título: ${pageTitle || 'Sin título'}
-Descripción: ${pageDescription || 'Sin descripción'}
-${firstParagraph ? `Contenido: ${firstParagraph.substring(0, 300)}...` : ''}`;
+    // Construir el contexto HTML estructurado para la IA
+    htmlContext = `=== INFORMACIÓN DE LA PÁGINA WEB ===
+
+URL: ${url}
+
+--- META TAGS ---
+Título: ${title || ogTitle || 'Sin título'}
+Descripción: ${description || ogDescription || 'Sin descripción'}
+${keywords ? `Palabras clave: ${keywords}` : ''}
+
+--- ENCABEZADOS PRINCIPALES ---
+${h1Texts.length > 0 ? 'H1: ' + h1Texts.join(' | ') : ''}
+${h2Texts.length > 0 ? 'H2: ' + h2Texts.join(' | ') : ''}
+${h3Texts.length > 0 ? 'H3: ' + h3Texts.join(' | ') : ''}
+
+--- CONTENIDO PRINCIPAL ---
+${paragraphs.join('\n\n')}
+
+${schemaText ? `--- DATOS ESTRUCTURADOS (Schema.org) ---
+${schemaText}` : ''}
+
+=== FIN DE LA INFORMACIÓN ===`;
+
+    console.log(`[generateContentFromURL] Contexto HTML extraído: ${htmlContext.length} caracteres`);
     
   } catch (error) {
     console.log(`[generateContentFromURL] Error obteniendo contenido: ${error.message}`);
-    // Usar solo la URL si no se puede obtener el contenido
-    pageContent = `URL: ${url}
-Título: ${url.split('/').pop() || 'Artículo'}
-Descripción: Contenido de ${url.split('//')[1]?.split('/')[0] || 'nuestro sitio web'}`;
+    // Contexto mínimo si falla la extracción
+    const urlPart = url.split('/').pop() || 'página';
+    htmlContext = `URL: ${url}
+Tema: ${urlPart.replace(/-/g, ' ')}
+Sitio: ${url.split('//')[1]?.split('/')[0] || 'sitio web'}`;
   }
 
-  // Crear el prompt optimizado
-  const systemPrompt = template || `Experto en marketing de Facebook. Crea UN SOLO post corto y atractivo con emojis.`;
+  // Crear prompts según si hay contexto personalizado del usuario o no
+  let systemPrompt, userPrompt;
+  
+  if (context && context.length > 20) {
+    // El usuario dio instrucciones específicas - seguirlas fielmente
+    systemPrompt = template || `Eres un experto en marketing digital y redes sociales especializado en crear posts para Facebook. Debes seguir exactamente las instrucciones del usuario sobre el tono, estilo y contenido.`;
+    
+    userPrompt = `El usuario te ha dado estas instrucciones sobre cómo crear los posts:
 
-  const userPrompt = `Post para Facebook sobre:
-${pageContent}
-${context ? `\nContexto: ${context}` : ''}
+"""
+${context}
+"""
 
-Responde SOLO con este formato JSON (un solo objeto):
-{"title":"Título corto","message":"Mensaje max 200 chars con emojis"}`;
+Información de la página web para usar en el post:
+
+${htmlContext}
+
+Crea UN SOLO post para Facebook siguiendo las instrucciones del usuario.
+
+Responde ÚNICAMENTE con este formato JSON (un solo objeto, sin arrays):
+{"title":"Tu título aquí con emojis","message":"Tu mensaje aquí con emojis y hashtags"}
+
+NO incluyas explicaciones, solo el JSON.`;
+    
+  } else {
+    // Sin instrucciones específicas - analizar el HTML y crear algo apropiado
+    systemPrompt = template || `Eres un experto en marketing digital y redes sociales. Tu tarea es analizar el contenido HTML de una página web y crear un post atractivo para Facebook que promocione esa página.
+
+IMPORTANTE:
+- Analiza el contenido HTML proporcionado para entender de qué trata la página
+- Identifica el propósito principal (venta, servicio, información, etc.)
+- Detecta el tono apropiado (profesional, casual, urgente, etc.)
+- Extrae los puntos clave y beneficios más importantes
+- Crea un mensaje que resuene con la audiencia objetivo`;
+
+    userPrompt = `Analiza el siguiente contenido HTML de una página web y crea UN SOLO post atractivo para Facebook:
+
+${htmlContext}
+
+INSTRUCCIONES:
+1. Lee y comprende TODO el contenido proporcionado
+2. Identifica el mensaje principal y el propósito de la página
+3. Crea un título llamativo con emojis apropiados
+4. Escribe un mensaje breve (máximo 200 caracteres) que:
+   - Capture la esencia de la página
+   - Use emojis relevantes al tema
+   - Incluya un llamado a la acción
+   - Termine con 2-4 hashtags relevantes
+
+Responde ÚNICAMENTE con este formato JSON (un solo objeto, sin arrays):
+{"title":"Tu título aquí","message":"Tu mensaje aquí"}
+
+NO incluyas explicaciones, solo el JSON.`;
+  }
 
   console.log(`[generateContentFromURL] Llamando a ${aiProvider}...`);
 

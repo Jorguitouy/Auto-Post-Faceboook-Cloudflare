@@ -224,6 +224,7 @@ async function createProject() {
     const domain = document.getElementById('projectDomain').value.trim();
     const description = document.getElementById('projectDescription').value.trim();
     const urlsText = document.getElementById('projectUrls').value.trim();
+    const aiPrompt = document.getElementById('projectAiPrompt').value.trim();
     const aiEnabled = document.getElementById('projectAiEnabled').checked;
     const autoPublish = document.getElementById('projectAutoPublish').checked;
     
@@ -262,6 +263,7 @@ async function createProject() {
                 domain,
                 description,
                 urls,
+                aiPrompt,
                 aiEnabled,
                 autoPublish
             })
@@ -271,13 +273,15 @@ async function createProject() {
         
         if (result.success) {
             const urlsMsg = urls.length > 0 ? ` con ${urls.length} URLs` : '';
-            showMessage(`✅ Proyecto "${name}" creado exitosamente${urlsMsg}`, 'success');
+            const promptMsg = aiPrompt ? ' y prompt personalizado' : '';
+            showMessage(`✅ Proyecto "${name}" creado exitosamente${urlsMsg}${promptMsg}`, 'success');
             
             // Limpiar formulario
             document.getElementById('projectName').value = '';
             document.getElementById('projectDomain').value = '';
             document.getElementById('projectDescription').value = '';
             document.getElementById('projectUrls').value = '';
+            document.getElementById('projectAiPrompt').value = '';
             
             await loadProjects();
             await loadStats();
@@ -297,6 +301,7 @@ function editProject(projectId) {
     document.getElementById('editProjectName').value = project.name;
     document.getElementById('editProjectDomain').value = project.domain;
     document.getElementById('editProjectDescription').value = project.description || '';
+    document.getElementById('editProjectAiPrompt').value = project.aiPrompt || '';
     document.getElementById('editProjectActive').checked = project.active;
     
     // Cargar URLs existentes
@@ -316,6 +321,7 @@ async function saveEditProject() {
     const domain = document.getElementById('editProjectDomain').value.trim();
     const description = document.getElementById('editProjectDescription').value.trim();
     const urlsText = document.getElementById('editProjectUrls').value.trim();
+    const aiPrompt = document.getElementById('editProjectAiPrompt').value.trim();
     const active = document.getElementById('editProjectActive').checked;
     
     if (!name || !domain) {
@@ -343,7 +349,7 @@ async function saveEditProject() {
         const response = await fetch(`/api/projects/${projectId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, domain, description, urls, active })
+            body: JSON.stringify({ name, domain, description, urls, aiPrompt, active })
         });
         
         const result = await response.json();

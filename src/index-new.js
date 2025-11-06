@@ -234,13 +234,13 @@ async function handleCreateProject(request, env, corsHeaders) {
     domain: data.domain,
     description: data.description || '',
     urls: cleanUrls, // URLs limpias
+    aiPrompt: data.aiPrompt || '', // Prompt personalizado para la IA
     fbPageId: data.fbPageId || env.FB_PAGE_ID,
     active: true,
     createdAt: new Date().toISOString(),
     settings: {
       aiEnabled: data.aiEnabled !== undefined ? data.aiEnabled : true,
-      autoPublish: data.autoPublish !== undefined ? data.autoPublish : true,
-      postTemplate: data.postTemplate || ''
+      autoPublish: data.autoPublish !== undefined ? data.autoPublish : true
     }
   };
 
