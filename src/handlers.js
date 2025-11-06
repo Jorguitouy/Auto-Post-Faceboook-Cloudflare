@@ -710,15 +710,28 @@ export function generateId() {
 /**
  * Publica un post en Facebook usando la Graph API
  * Facebook extraerá automáticamente Open Graph tags de la URL
+ * @param {Object} post - Post a publicar
+ * @param {Object} env - Environment variables
+ * @param {Object} project - Proyecto con credenciales específicas (opcional)
  */
-export async function publishToFacebook(post, env) {
-  // Intentar obtener credenciales de KV primero, luego env
-  const pageAccessToken = await env.FB_PUBLISHER_KV.get('FB_PAGE_ACCESS_TOKEN') || env.FB_PAGE_ACCESS_TOKEN;
-  const pageId = await env.FB_PUBLISHER_KV.get('FB_PAGE_ID') || env.FB_PAGE_ID;
+export async function publishToFacebook(post, env, project = null) {
+  let pageAccessToken, pageId;
+  
+  // Prioridad: 1. Proyecto específico, 2. KV global, 3. ENV
+  if (project && project.fbPageAccessToken && project.fbPageId) {
+    pageAccessToken = project.fbPageAccessToken;
+    pageId = project.fbPageId;
+    console.log(`[publishToFacebook] Usando credenciales del proyecto: ${project.name} (Page: ${project.fbPageName || pageId})`);
+  } else {
+    pageAccessToken = await env.FB_PUBLISHER_KV.get('FB_PAGE_ACCESS_TOKEN') || env.FB_PAGE_ACCESS_TOKEN;
+    pageId = await env.FB_PUBLISHER_KV.get('FB_PAGE_ID') || env.FB_PAGE_ID;
+    console.log(`[publishToFacebook] Usando credenciales globales (Page ID: ${pageId})`);
+  }
+  
   const apiVersion = env.FACEBOOK_API_VERSION || 'v18.0';
 
   if (!pageAccessToken || !pageId) {
-    return { success: false, error: 'Credenciales de Facebook no configuradas' };
+    return { success: false, error: 'Credenciales de Facebook no configuradas para este proyecto' };
   }
 
   const apiUrl = `https://graph.facebook.com/${apiVersion}/${pageId}/feed`;
@@ -767,8 +780,16 @@ export async function publishPostToFacebook(projectId, post, env) {
     return { success: false, error: 'Proyecto no encontrado' };
   }
 
-  // Publicar en Facebook
-  const fbResponse = await publishToFacebook(post, env);
+  // Verificar que el proyecto tenga credenciales de Facebook
+  if (!project.fbPageId || !project.fbPageAccessToken) {
+    return { 
+      success: false, 
+      error: 'Este proyecto no tiene una fanpage conectada. Por favor conecta una fanpage primero.' 
+    };
+  }
+
+  // Publicar en Facebook pasando el proyecto con sus credenciales
+  const fbResponse = await publishToFacebook(post, env, project);
 
   // Actualizar el post
   const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${projectId}:posts`, { type: 'json' }) || { posts: [] };
@@ -806,22 +827,29 @@ export async function publishNextPost(env) {
   // Obtener todos los proyectos
   const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
   
-  // Buscar posts pendientes en todos los proyectos activos
+  // Buscar posts pendientes en todos los proyectos activos Y conectados a Facebook
   for (const project of projects.projects) {
     if (!project.active) continue;
+    
+    // Saltar proyectos sin credenciales de Facebook
+    if (!project.fbPageId || !project.fbPageAccessToken) {
+      console.log(`[publishNextPost] Saltando proyecto ${project.name} - no tiene fanpage conectada`);
+      continue;
+    }
     
     const projectPosts = await env.FB_PUBLISHER_KV.get(`project:${project.id}:posts`, { type: 'json' }) || { posts: [] };
     const pendingPosts = projectPosts.posts.filter(p => p.status === 'pending');
     
     if (pendingPosts.length > 0) {
       const nextPost = pendingPosts[0];
+      console.log(`[publishNextPost] Publicando post del proyecto ${project.name}`);
       const result = await publishPostToFacebook(project.id, nextPost, env);
       return result;
     }
   }
 
   console.log('No hay posts pendientes para publicar');
-  return { success: false, message: 'No hay posts pendientes en ningún proyecto' };
+  return { success: false, message: 'No hay posts pendientes en ningún proyecto con fanpage conectada' };
 }
 
 // ========================================

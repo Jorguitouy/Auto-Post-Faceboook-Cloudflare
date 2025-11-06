@@ -124,7 +124,7 @@ export async function handleFacebookCallback(request, env, corsHeaders) {
 }
 
 /**
- * Guarda la página seleccionada y sus tokens
+ * Guarda la página seleccionada y sus tokens en el proyecto específico
  */
 export async function handlePageSelection(request, env, corsHeaders) {
   try {
@@ -152,25 +152,25 @@ export async function handlePageSelection(request, env, corsHeaders) {
       env.FACEBOOK_APP_SECRET
     );
 
-    // Actualizar el proyecto con la información de la página
-    const projectKey = `project_${projectId}`;
-    const projectStr = await env.FB_PUBLISHER_KV.get(projectKey);
-    if (!projectStr) {
+    // Actualizar el proyecto con las credenciales de Facebook
+    const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+    const projectIndex = projects.projects.findIndex(p => p.id === projectId);
+    
+    if (projectIndex === -1) {
       throw new Error('Proyecto no encontrado');
     }
 
-    const project = JSON.parse(projectStr);
-    project.facebook = {
-      pageId: selectedPage.id,
-      pageName: selectedPage.name,
-      pageAccessToken: longLivedToken,
-      userId: tempData.userId,
-      userName: tempData.userName,
-      connectedAt: new Date().toISOString()
-    };
+    // Actualizar proyecto con credenciales de Facebook
+    projects.projects[projectIndex].fbPageId = selectedPage.id;
+    projects.projects[projectIndex].fbPageName = selectedPage.name;
+    projects.projects[projectIndex].fbPageAccessToken = longLivedToken;
+    projects.projects[projectIndex].fbConnected = true;
+    projects.projects[projectIndex].fbConnectedAt = new Date().toISOString();
+    projects.projects[projectIndex].fbUserId = tempData.userId;
+    projects.projects[projectIndex].fbUserName = tempData.userName;
 
     // Guardar proyecto actualizado
-    await env.FB_PUBLISHER_KV.put(projectKey, JSON.stringify(project));
+    await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
 
     // Limpiar datos temporales
     await env.FB_PUBLISHER_KV.delete(tempKey);
@@ -245,17 +245,28 @@ export async function handleDisconnectPage(request, env, corsHeaders) {
     const url = new URL(request.url);
     const projectId = url.pathname.split('/')[3];
 
-    const projectKey = `project_${projectId}`;
-    const projectStr = await env.FB_PUBLISHER_KV.get(projectKey);
+    // Obtener proyectos
+    const projects = await env.FB_PUBLISHER_KV.get('projects', { type: 'json' }) || { projects: [] };
+    const projectIndex = projects.projects.findIndex(p => p.id === projectId);
     
-    if (!projectStr) {
+    if (projectIndex === -1) {
       throw new Error('Proyecto no encontrado');
     }
 
-    const project = JSON.parse(projectStr);
-    delete project.facebook;
+    // Limpiar credenciales de Facebook del proyecto
+    projects.projects[projectIndex].fbPageId = null;
+    projects.projects[projectIndex].fbPageName = null;
+    projects.projects[projectIndex].fbPageAccessToken = null;
+    projects.projects[projectIndex].fbConnected = false;
+    projects.projects[projectIndex].fbDisconnectedAt = new Date().toISOString();
+    
+    // Remover campos opcionales si existen
+    delete projects.projects[projectIndex].fbUserId;
+    delete projects.projects[projectIndex].fbUserName;
+    delete projects.projects[projectIndex].fbConnectedAt;
 
-    await env.FB_PUBLISHER_KV.put(projectKey, JSON.stringify(project));
+    // Guardar cambios
+    await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

@@ -149,6 +149,18 @@ function renderProjects() {
             <div class="project-domain">🌐 ${project.domain}</div>
             ${project.description ? `<p class="text-gray text-small">${project.description}</p>` : ''}
             
+            <!-- Estado de conexión con Facebook -->
+            <div class="facebook-status" style="margin: 10px 0; padding: 8px; border-radius: 6px; ${project.fbConnected ? 'background: #d4edda; color: #155724;' : 'background: #f8d7da; color: #721c24;'}">
+                ${project.fbConnected 
+                    ? `✅ Facebook: ${project.fbPageName || 'Conectado'}`
+                    : '❌ No conectado a Facebook'
+                }
+                ${project.fbConnected 
+                    ? `<button onclick="disconnectFacebook('${project.id}')" style="margin-left: 10px; font-size: 11px; padding: 2px 8px;">Desconectar</button>`
+                    : `<button onclick="connectFacebook('${project.id}')" style="margin-left: 10px; font-size: 11px; padding: 2px 8px;">Conectar</button>`
+                }
+            </div>
+            
             <div class="project-stats">
                 <div class="project-stat">
                     <div class="project-stat-value">${project.stats?.totalPosts || 0}</div>
@@ -1538,15 +1550,17 @@ function updateFacebookStatus(project) {
 /**
  * Inicia el flujo OAuth de Facebook
  */
-function connectFacebook() {
-    const projectId = window.currentEditingProjectId;
-    
+/**
+ * Conecta una fanpage de Facebook a un proyecto específico
+ */
+function connectFacebook(projectId) {
     if (!projectId) {
-        showMessage('❌ Error: No hay proyecto seleccionado', 'error');
+        showMessage('❌ Error: ID de proyecto no válido', 'error');
         return;
     }
     
     // Abrir ventana de OAuth de Facebook
+    const API_BASE = window.location.origin;
     const loginUrl = `${API_BASE}/api/auth/facebook/login?projectId=${projectId}`;
     
     // Abrir en una nueva ventana popup
@@ -1566,17 +1580,18 @@ function connectFacebook() {
         return;
     }
     
+    showMessage('🔄 Abriendo ventana de autorización de Facebook...', 'info');
+    
     // Escuchar el cierre de la ventana popup
     const checkPopupClosed = setInterval(() => {
         if (popup.closed) {
             clearInterval(checkPopupClosed);
-            // Recargar el proyecto para ver si se conectó
+            // Recargar proyectos para ver si se conectó
             setTimeout(async () => {
                 await loadProjects();
                 const project = projects.find(p => p.id === projectId);
-                if (project && project.facebook) {
-                    showMessage('✅ Fanpage conectada exitosamente', 'success');
-                    updateFacebookStatus(project);
+                if (project && project.fbConnected) {
+                    showMessage(`✅ Fanpage "${project.fbPageName}" conectada exitosamente`, 'success');
                 }
             }, 1000);
         }
@@ -1592,6 +1607,7 @@ async function disconnectFacebook(projectId) {
     }
     
     try {
+        const API_BASE = window.location.origin;
         const response = await fetch(`${API_BASE}/api/projects/${projectId}/disconnect-facebook`, {
             method: 'POST',
             headers: {
@@ -1602,14 +1618,10 @@ async function disconnectFacebook(projectId) {
         const data = await response.json();
         
         if (data.success) {
-            showMessage('✅ Fanpage desconectada', 'success');
+            showMessage('✅ Fanpage desconectada exitosamente', 'success');
             
-            // Recargar proyectos y actualizar estado
+            // Recargar proyectos
             await loadProjects();
-            const project = projects.find(p => p.id === projectId);
-            if (project) {
-                updateFacebookStatus(project);
-            }
         } else {
             throw new Error(data.error || 'Error al desconectar');
         }

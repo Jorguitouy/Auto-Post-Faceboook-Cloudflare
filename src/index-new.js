@@ -273,7 +273,11 @@ async function handleCreateProject(request, env, corsHeaders) {
     description: data.description || '',
     urls: cleanUrls, // URLs limpias
     aiPrompt: data.aiPrompt || '', // Prompt personalizado para la IA
-    fbPageId: data.fbPageId || env.FB_PAGE_ID,
+    // Credenciales de Facebook específicas del proyecto
+    fbPageId: data.fbPageId || null,
+    fbPageAccessToken: data.fbPageAccessToken || null,
+    fbPageName: data.fbPageName || null,
+    fbConnected: !!(data.fbPageId && data.fbPageAccessToken), // Estado de conexión
     active: true,
     createdAt: new Date().toISOString(),
     settings: {
@@ -342,12 +346,19 @@ async function handleUpdateProject(projectId, request, env, corsHeaders) {
     });
   }
   
-  projects.projects[projectIndex] = {
+  const updatedProject = {
     ...projects.projects[projectIndex],
     ...data,
     id: projectId, // Preservar el ID
     updatedAt: new Date().toISOString()
   };
+  
+  // Actualizar estado de conexión si se modifican credenciales FB
+  if (data.fbPageId !== undefined || data.fbPageAccessToken !== undefined) {
+    updatedProject.fbConnected = !!(updatedProject.fbPageId && updatedProject.fbPageAccessToken);
+  }
+  
+  projects.projects[projectIndex] = updatedProject;
   
   await env.FB_PUBLISHER_KV.put('projects', JSON.stringify(projects));
   
