@@ -259,22 +259,15 @@ Título: ${url.split('/').pop() || 'Artículo'}
 Descripción: Contenido de ${url.split('//')[1]?.split('/')[0] || 'nuestro sitio web'}`;
   }
 
-  // Crear el prompt
-  const systemPrompt = template || `Eres un experto en marketing de redes sociales. 
-Tu tarea es crear publicaciones atractivas y engagement para Facebook basándote en el contenido de una página web.
-El mensaje debe ser corto (máximo 200 caracteres), atractivo, usar emojis relevantes, y motivar a hacer clic.`;
+  // Crear el prompt optimizado
+  const systemPrompt = template || `Experto en marketing de Facebook. Crea posts cortos, atractivos con emojis.`;
 
-  const userPrompt = `Crea un post para Facebook basado en esta página web:
-
+  const userPrompt = `Post para Facebook sobre:
 ${pageContent}
+${context ? `\nContexto: ${context}` : ''}
 
-${context ? `Contexto adicional: ${context}` : ''}
-
-Responde SOLO con un objeto JSON con este formato:
-{
-  "title": "Título corto y atractivo",
-  "message": "Mensaje para el post (máximo 200 caracteres, con emojis)"
-}`;
+JSON format:
+{"title":"Título corto","message":"Mensaje max 200 chars con emojis"}`;
 
   console.log(`[generateContentFromURL] Llamando a ${aiProvider}...`);
 
@@ -367,7 +360,7 @@ async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
         }],
         generationConfig: {
           temperature: 0.8,
-          maxOutputTokens: 300,
+          maxOutputTokens: 1000,
         }
       })
     });
@@ -375,7 +368,7 @@ async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
     const data = await response.json();
     
     console.log(`[generateWithGemini] Response status: ${response.status}`);
-    console.log(`[generateWithGemini] Response data:`, JSON.stringify(data).substring(0, 200));
+    console.log(`[generateWithGemini] Response data COMPLETO:`, JSON.stringify(data, null, 2));
     
     if (!response.ok) {
       console.error(`[generateWithGemini] Error API:`, data);
@@ -383,12 +376,21 @@ async function generateWithGemini(systemPrompt, userPrompt, apiKey, env) {
     }
 
     // Extraer el contenido de la respuesta de Gemini
+    console.log(`[generateWithGemini] Extrayendo contenido...`);
+    console.log(`[generateWithGemini] data.candidates:`, data.candidates);
+    console.log(`[generateWithGemini] data.candidates[0]:`, data.candidates?.[0]);
+    console.log(`[generateWithGemini] data.candidates[0].content:`, data.candidates?.[0]?.content);
+    console.log(`[generateWithGemini] data.candidates[0].content.parts:`, data.candidates?.[0]?.content?.parts);
+    console.log(`[generateWithGemini] data.candidates[0].content.parts[0]:`, data.candidates?.[0]?.content?.parts?.[0]);
+    
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
-    console.log(`[generateWithGemini] Contenido generado: ${content.substring(0, 100)}...`);
+    console.log(`[generateWithGemini] Contenido extraído (length: ${content.length}): ${content.substring(0, 200)}...`);
     
     if (!content) {
-      throw new Error('Respuesta vacía de Gemini');
+      console.error(`[generateWithGemini] CONTENIDO VACIO!`);
+      console.error(`[generateWithGemini] Data completo:`, JSON.stringify(data, null, 2));
+      throw new Error(`Respuesta vacía de Gemini. Data: ${JSON.stringify(data)}`);
     }
     
     // Intentar parsear el JSON de la respuesta
