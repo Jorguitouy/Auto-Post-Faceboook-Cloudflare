@@ -5,7 +5,7 @@ compatibility_date = "2024-01-01"
 # Reglas para importar archivos como texto
 [[rules]]
 type = "Text"
-globs = ["**/*.html", "**/*.css", "**/dashboard.js"]
+globs = ["**/*.html", "**/*.css", "**/dashboard.js", "**/assets/**/*.js"]
 fallthrough = true
 
 # Cron triggers para publicar en horarios específicos

@@ -13,6 +13,18 @@ import accountHTML from './account.html';
 import forgotPasswordHTML from './forgot-password.html';
 import resetPasswordHTML from './reset-password.html';
 
+// Importar assets CSS
+import loginCSS from './assets/css/login.css';
+import accountCSS from './assets/css/account.css';
+import forgotPasswordCSS from './assets/css/forgot-password.css';
+import resetPasswordCSS from './assets/css/reset-password.css';
+
+// Importar assets JS
+import loginJS from './assets/js/login.js';
+import accountJS from './assets/js/account.js';
+import forgotPasswordJS from './assets/js/forgot-password.js';
+import resetPasswordJS from './assets/js/reset-password.js';
+
 // Importar handlers
 import {
   handleAddProjectPost,
@@ -198,6 +210,51 @@ export default {
       if (url.pathname === '/dashboard.js') {
         return new Response(getDashboardJS(), {
           headers: { ...corsHeaders, 'Content-Type': 'application/javascript; charset=utf-8' }
+        });
+      }
+
+      // ========== ASSETS ESTÁTICOS ==========
+      // Servir CSS
+      if (url.pathname === '/assets/css/login.css') {
+        return new Response(loginCSS, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/css/account.css') {
+        return new Response(accountCSS, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/css/forgot-password.css') {
+        return new Response(forgotPasswordCSS, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/css/reset-password.css') {
+        return new Response(resetPasswordCSS, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+
+      // Servir JavaScript
+      if (url.pathname === '/assets/js/login.js') {
+        return new Response(loginJS, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/js/account.js') {
+        return new Response(accountJS, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/js/forgot-password.js') {
+        return new Response(forgotPasswordJS, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
+        });
+      }
+      if (url.pathname === '/assets/js/reset-password.js') {
+        return new Response(resetPasswordJS, {
+          headers: { ...corsHeaders, 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=31536000' }
         });
       }
 
